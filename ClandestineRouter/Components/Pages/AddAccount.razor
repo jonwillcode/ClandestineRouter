@@ -1,0 +1,47 @@
+﻿@page "/clandestine/add-account"
+@using System.ComponentModel.DataAnnotations
+
+<PageTitle>Add social account</PageTitle>
+
+<h1>Add social account</h1>
+
+<div class="row">
+    <div class="col-lg-6">
+        <section>
+            <EditForm Model="Input" method="post" OnValidSubmit="AddSocialAccount" FormName="addSocialAccount">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" role="alert" />
+                <div class="form-floating mb-3">
+                    <InputText @bind-Value="Input.Username" id="Input.Username" class="form-control" autocomplete="off" aria-required="true" placeholder="Username" />
+                    <label for="Input.Username" class="form-label">Username</label>
+                    <ValidationMessage For="() => Input.Username" class="text-danger" />
+                </div>
+                <div>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </EditForm>
+        </section>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    private void AddSocialAccount(EditContext args)
+    {
+        throw new NotImplementedException();
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        public string Username { get; set; } = string.Empty;
+
+        [Required]
+        public string SocialMediaAppId { get; set; } = string.Empty;
+    }
+}
