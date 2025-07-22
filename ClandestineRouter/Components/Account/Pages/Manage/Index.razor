@@ -2,6 +2,7 @@
 
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Identity
+@using TimeZoneConverter
 @using ClandestineRouter.Data
 
 @inject UserManager<ApplicationUser> UserManager
@@ -28,6 +29,18 @@
                 <label for="Input.PhoneNumber" class="form-label">Phone number</label>
                 <ValidationMessage For="() => Input.PhoneNumber" class="text-danger" />
             </div>
+            <div class="form-floating mb-3">
+                
+                <InputSelect @bind-Value="Input.LocalTimeZone" id="Input.LocalTimeZone" class="form-select">
+                    <option value=""></option>
+                    @foreach (var item in TimeZones)
+                    {
+                        <option value="@item.ianaId">@item.displayName</option>
+                    }
+                    </InputSelect>
+                <label for="Input.LocalTimeZone" class="form-label">Local time zone</label>
+                <ValidationMessage For="() => Input.LocalTimeZone" class="text-danger" />
+            </div>
             <button type="submit" class="w-100 btn btn-lg btn-primary">Save</button>
         </EditForm>
     </div>
@@ -37,6 +50,8 @@
     private ApplicationUser user = default!;
     private string? username;
     private string? phoneNumber;
+    private string? localTimeZone;
+    private List<TimeZoneDisplayItem> TimeZones = [];
 
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
@@ -49,8 +64,15 @@
         user = await UserAccessor.GetRequiredUserAsync(HttpContext);
         username = await UserManager.GetUserNameAsync(user);
         phoneNumber = await UserManager.GetPhoneNumberAsync(user);
+        localTimeZone = user.LocalTimeZone;
+
+        TimeZones = TimeZoneInfo.GetSystemTimeZones()
+            .Select(tz => new TimeZoneDisplayItem(tz.Id, TZConvert.WindowsToIana(tz.Id), tz.DisplayName))
+            .OrderBy(tz => tz.displayName)
+            .ToList();
 
         Input.PhoneNumber ??= phoneNumber;
+        Input.LocalTimeZone ??= localTimeZone;
     }
 
     private async Task OnValidSubmitAsync()
@@ -64,8 +86,30 @@
             }
         }
 
+        if (Input.LocalTimeZone != localTimeZone && !string.IsNullOrEmpty(Input.LocalTimeZone))
+        {
+            user.LocalTimeZone = Input.LocalTimeZone;
+            var setLocalTimeZoneResult = await UserManager.UpdateAsync(user);
+            if (!setLocalTimeZoneResult.Succeeded)
+            {
+                RedirectManager.RedirectToCurrentPageWithStatus("Error: Failed to set local time zone.", HttpContext);
+            }
+        }
+
         await SignInManager.RefreshSignInAsync(user);
         RedirectManager.RedirectToCurrentPageWithStatus("Your profile has been updated", HttpContext);
+    }
+
+    private async Task SaveTimeZone()
+    {
+        if (string.IsNullOrEmpty(Input.LocalTimeZone)) return;
+        if (user is null) return;
+
+        // Convert Windows ID to IANA before storing
+        var ianaId = TZConvert.WindowsToIana(Input.LocalTimeZone);
+
+        user.LocalTimeZone = ianaId;
+        await UserManager.UpdateAsync(user);
     }
 
     private sealed class InputModel
@@ -73,5 +117,10 @@
         [Phone]
         [Display(Name = "Phone number")]
         public string? PhoneNumber { get; set; }
+
+        [Display(Name = "Local time zone")]
+        public string? LocalTimeZone { get; set; }
     }
+
+    public sealed record TimeZoneDisplayItem(string windowsId, string ianaId, string displayName);
 }
