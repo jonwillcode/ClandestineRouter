@@ -1,0 +1,13 @@
+﻿@page "/configuration/manage-lookups"
+
+<PageTitle>@PageTitle</PageTitle>
+
+<h1>@PageTitle</h1>
+
+<ClandestineRouter.Components.Lookup.LookupManager TLookup="EncounterType" />
+<ClandestineRouter.Components.Lookup.LookupManager TLookup="SocialMediaApp" />
+
+
+@code {
+    private const string PageTitle = "Manage lookups";
+}

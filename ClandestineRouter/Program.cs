@@ -1,6 +1,9 @@
 using ClandestineRouter.Components;
 using ClandestineRouter.Components.Account;
 using ClandestineRouter.Data;
+using ClandestineRouter.Data.Models;
+using ClandestineRouter.Data.Repositories;
+using ClandestineRouter.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -34,6 +37,16 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
     .AddDefaultTokenProviders();
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+
+builder.Services.AddQuickGridEntityFrameworkAdapter();
+
+builder.Services.AddTimeZoneServices();
+
+builder.Services.AddScoped(typeof(ILookupRepository<>), typeof(LookupRepository<>));
+builder.Services.AddScoped<ILookupService, LookupService>();
+
+// Register specific lookup repositories (optional, for direct injection)
+//builder.Services.AddScoped<ILookupRepository<BehaviorType>, LookupRepository<BehaviorType>>();
 
 var app = builder.Build();
 

@@ -2,9 +2,6 @@
 
 namespace ClandestineRouter.Data.Models;
 
-public class SocialMediaApp : BaseModel
+public class SocialMediaApp : BaseLookupModel
 {
-
-    [Required, MaxLength(256)]
-    public string Name { get; set; } = string.Empty;
 }

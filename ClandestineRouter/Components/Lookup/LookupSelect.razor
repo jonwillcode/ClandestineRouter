@@ -1,0 +1,52 @@
+﻿@using ClandestineRouter.Services
+@typeparam TLookup where TLookup : class, IBaseLookupModel
+@inject ILookupService LookupService
+
+<div class="mb-3">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label for="@InputId" class="form-label">@Label</label>
+    }
+    <select id="@InputId" class="form-select @CssClass" @onchange="OnSelectionChanged" disabled="@Disabled">
+        <option value="">@PlaceholderText</option>
+        @if (lookupItems != null)
+        {
+            @foreach (var item in lookupItems)
+            {
+                <option value="@item.Id" selected="@(item.Id == SelectedValue)">
+                    @item.Name
+                </option>
+            }
+        }
+    </select>
+    @if (!string.IsNullOrEmpty(ValidationMessage))
+    {
+        <div class="invalid-feedback d-block">@ValidationMessage</div>
+    }
+</div>
+
+@code {
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public Guid? SelectedValue { get; set; }
+    [Parameter] public EventCallback<Guid?> SelectedValueChanged { get; set; }
+    [Parameter] public string PlaceholderText { get; set; } = "Please select...";
+    [Parameter] public string CssClass { get; set; } = "";
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string? ValidationMessage { get; set; }
+    [Parameter] public string InputId { get; set; } = Guid.NewGuid().ToString();
+
+    private List<TLookup>? lookupItems;
+
+    protected override async Task OnInitializedAsync()
+    {
+        lookupItems = await LookupService.GetLookupItemsAsync<TLookup>();
+    }
+
+    private async Task OnSelectionChanged(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+        var selectedId = string.IsNullOrEmpty(value) ? (Guid?)null : Guid.Parse(value);
+        SelectedValue = selectedId;
+        await SelectedValueChanged.InvokeAsync(selectedId);
+    }
+}

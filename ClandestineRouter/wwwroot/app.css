@@ -58,3 +58,19 @@ h1:focus {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+.quickgrid > thead {
+    position: sticky;
+    top: 0;
+    background-color: #d8d8d8;
+    outline: 1px solid gray;
+    z-index: 1;
+}
+
+.quickgrid > tbody > tr {
+    margin: .25rem;
+}
+
+.quickgrid > tbody > tr:hover {
+    background-color: #CDCDCD;
+}

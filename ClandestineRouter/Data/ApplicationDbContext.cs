@@ -20,6 +20,10 @@ namespace ClandestineRouter.Data
         {
             base.OnModelCreating(builder);
 
+            ConfigureLookupEntity<SocialMediaApp>(builder);
+            ConfigureLookupEntity<EncounterType>(builder);
+            ConfigureLookupEntity<BehaviorType>(builder);
+
             builder.Entity<Encounter>()
                 .HasMany(e => e.BeginBehaviorType)
                 .WithMany(b => b.EncountersBegin)
@@ -31,9 +35,9 @@ namespace ClandestineRouter.Data
                 .UsingEntity(j => j.ToTable("EncounterEndBehaviorType"));
 
             builder.Entity<Encounter>()
-        .HasMany(e => e.BeginBehaviorType)
-        .WithMany(b => b.EncountersBegin)
-        .UsingEntity(j => j.ToTable("EncounterBeginBehaviorType"));
+                .HasMany(e => e.BeginBehaviorType)
+                .WithMany(b => b.EncountersBegin)
+                .UsingEntity(j => j.ToTable("EncounterBeginBehaviorType"));
 
             builder.Entity<Encounter>()
                 .HasMany(e => e.EndBehaviorType)
@@ -60,6 +64,19 @@ namespace ClandestineRouter.Data
             builder.Entity<PersonaAssociation>()
                 .HasIndex(pa => new { pa.BasePersonaId, pa.AssociatePersonaId })
                 .IsUnique();
+        }
+
+        private static void ConfigureLookupEntity<T>(ModelBuilder builder) where T : BaseLookupModel
+        {
+            builder.Entity<T>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name)
+                      .IsRequired()
+                      .HasMaxLength(256);
+                entity.HasIndex(e => e.Name)
+                      .IsUnique();
+            });
         }
     }
 }
