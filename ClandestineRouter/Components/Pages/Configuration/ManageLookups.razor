@@ -1,13 +1,95 @@
 ﻿@page "/configuration/manage-lookups"
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Http.Extensions
+@using Microsoft.Extensions.Primitives
+@rendermode InteractiveServer
 
 <PageTitle>@PageTitle</PageTitle>
 
 <h1>@PageTitle</h1>
 
-<ClandestineRouter.Components.Lookup.LookupManager TLookup="EncounterType" />
-<ClandestineRouter.Components.Lookup.LookupManager TLookup="SocialMediaApp" />
+<div class="row">
+        <diav class="col-lg-6">
+            @if (LookupId is null)
+            {
+                <p>Select a lookup to manage</p>
+                <ul class="list-group">
+                    @foreach (var lookup in LookupTypes)
+                    {
+                    <li class="list-group"><a href="@($"{NavigationManager.ToBaseRelativePath(NavigationManager.Uri)}?id={lookup.TLookup}")">@lookup.DisplayText</a></li>
+                    }
+                </ul>
+            }
+            else
+            {
+                @switch (LookupId)
+                {
+                    case "EncounterType":
+                        <ClandestineRouter.Components.Lookup.LookupManager TLookup="EncounterType" />
+                        break;
+                    case "SocialMediaApp":
+                        <ClandestineRouter.Components.Lookup.LookupManager TLookup="SocialMediaApp" />
+                        break;
+                    default:
+                        <p>Unknown lookup type: @LookupId</p>;
+                        break;
+                }
+            }
 
+    </diav>
+</div>
 
 @code {
-    private const string PageTitle = "Manage lookups";
+    private string PageTitle = "Select a lookup";
+
+    private readonly List<LookupOption> LookupTypes = [
+        new LookupOption
+        { 
+            TLookup = "EncounterType", 
+            DisplayText = "Encounter types",
+        },
+        new LookupOption
+        {
+            TLookup = "SocialMediaApp", 
+            DisplayText = "Social media apps",
+        },
+    ];
+
+    [Inject]
+    public NavigationManager NavigationManager { get; set; } = default!;
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromQuery(Name = "id")]
+    public string? LookupId { get; set; }
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    protected override void OnParametersSet()
+    {
+        if (LookupId is null) return; 
+
+        var lookup = LookupTypes.FirstOrDefault(x => x.TLookup.Equals(LookupId, StringComparison.OrdinalIgnoreCase));
+        if (lookup is null)
+        {
+            NavigationManager.NavigateTo("/configuration/manage-lookups");
+            return;
+        }
+
+        PageTitle = $"Manage {lookup.DisplayText}";
+    }
+    private sealed class LookupOption
+    {
+        public string TLookup { get; set; } = string.Empty;
+        public string DisplayText { get; set; } = string.Empty;
+    }
+
+    private sealed class InputModel
+    {
+        [Required, Display(Name = "Lookup to manage")]
+        public string? SelectedLookup { get; set; }
+    }
+
 }

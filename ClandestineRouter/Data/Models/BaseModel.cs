@@ -8,7 +8,7 @@ public interface IBaseModel
 
 public abstract class BaseModel : IBaseModel
 {
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid Id { get; set; }
 
     public DateTime CreatedDateTimeUtc { get; set; }
 

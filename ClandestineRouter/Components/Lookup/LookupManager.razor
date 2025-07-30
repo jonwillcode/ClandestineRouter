@@ -5,7 +5,7 @@
 
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Manage @typeof(TLookup).Name</h5>
+        <h5 class="mb-0">List of options</h5>
         <button class="btn btn-primary btn-sm" @onclick="ShowAddModal">
             <i class="fas fa-plus"></i> Add New
         </button>
@@ -47,11 +47,11 @@
                                 <td>
                                     <button class="btn btn-sm btn-outline-primary me-1"
                                             @onclick="() => ShowEditModal(item)">
-                                        <i class="btn btn-sm btn-outline-primary">Edit</i>
+                                       ✏️ Edit
                                     </button>
                                     <button class="btn btn-sm btn-outline-danger"
                                             @onclick="() => DeleteItem(item.Id)">
-                                        <i class="btn btn-sm btn-outline-danger">Delete</i>
+                                        🗑️ Delete
                                     </button>
                                 </td>
                             </tr>
@@ -143,7 +143,7 @@
             if (editingItem.Id == Guid.Empty)
             {
                 await Repository.CreateAsync(editingItem);
-            }
+            }       
             else
             {
                 await Repository.UpdateAsync(editingItem);
