@@ -1,8 +1,9 @@
 ﻿@page "/configuration/manage-lookups"
 @using System.ComponentModel.DataAnnotations
+@using ClandestineRouter.Models
+@using ClandestineRouter.Services
 @using Microsoft.AspNetCore.Http.Extensions
 @using Microsoft.Extensions.Primitives
-@rendermode InteractiveServer
 
 <PageTitle>@PageTitle</PageTitle>
 
@@ -67,18 +68,34 @@
     [SupplyParameterFromForm]
     private InputModel Input { get; set; } = new();
 
+    @code {
+        // Add this property to inject the BreadcrumbService instance
+        [Inject]
+        public BreadcrumbService BreadcrumbService { get; set; } = default!;
+
+        protected override void OnInitialized() =>
+            // Use the injected instance to call SetBreadcrumbs
+            BreadcrumbService.SetBreadcrumbs(
+                new BreadcrumbItem { Text = "Home", Href = "/", Icon = "🏠" },
+                new BreadcrumbItem { Text = "Manage lookups", Href = "/configuration/manage-lookups", Icon = "⚙️" }
+            );
+
+        // ... rest of your code remains unchanged ...
+    }
+
     protected override void OnParametersSet()
     {
-        if (LookupId is null) return; 
+    if (LookupId is null) return; 
 
-        var lookup = LookupTypes.FirstOrDefault(x => x.TLookup.Equals(LookupId, StringComparison.OrdinalIgnoreCase));
-        if (lookup is null)
-        {
-            NavigationManager.NavigateTo("/configuration/manage-lookups");
-            return;
-        }
+    var lookup = LookupTypes.FirstOrDefault(x => x.TLookup.Equals(LookupId, StringComparison.OrdinalIgnoreCase));
+    if (lookup is null)
+    {
+        NavigationManager.NavigateTo("/configuration/manage-lookups");
+        return;
+    }
 
-        PageTitle = $"Manage {lookup.DisplayText}";
+    PageTitle = $"Manage {lookup.DisplayText}";
+    BreadcrumbService.AddBreadcrumb(new BreadcrumbItem { Text = lookup.DisplayText, Href = NavigationManager.Uri, Icon = "✏️" });
     }
     private sealed class LookupOption
     {

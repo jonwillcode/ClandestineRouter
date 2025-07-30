@@ -44,6 +44,7 @@ builder.Services.AddTimeZoneServices();
 
 builder.Services.AddScoped(typeof(ILookupRepository<>), typeof(LookupRepository<>));
 builder.Services.AddScoped<ILookupService, LookupService>();
+builder.Services.AddScoped<BreadcrumbService>();
 
 // Register specific lookup repositories (optional, for direct injection)
 //builder.Services.AddScoped<ILookupRepository<BehaviorType>, LookupRepository<BehaviorType>>();
