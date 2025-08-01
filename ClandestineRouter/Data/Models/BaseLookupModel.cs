@@ -11,6 +11,7 @@ public interface IBaseLookupModel : IBaseModel
 
 public abstract class BaseLookupModel : BaseModel, IBaseLookupModel
 {
+    [Required]
     public string Name { get; set; } = string.Empty;
 
     public bool IsActive { get; set; }
