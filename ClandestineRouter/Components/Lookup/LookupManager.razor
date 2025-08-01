@@ -5,11 +5,15 @@
 
 <div class="row">
     <div class="col">
-        <div class="d-flex justify-content-end">
+        <div class="d-flex justify-content-start">
             <button class="btn btn-primary btn-sm" @onclick="ShowAddModal">
                 <i class="fas fa-plus"></i> Add New
             </button>
         </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col">
         @if (items == null)
         {
             <div class="text-center">
@@ -31,7 +35,7 @@
                 </TemplateColumn>
                 <PropertyColumn Property="u => u.UpdatedDateTimeUtc" Format="MM/dd/yyyy hh:mm tt" Title="Updated" />
                 <TemplateColumn Title="Actions">
-                    <button class="btn btn-sm btn-outline-primary me-1" @onclick="@(() => ShowEditModal(context))" >
+                    <button class="btn btn-sm btn-outline-primary me-1" @onclick="@(() => ShowEditModal(context))">
                         ✏️ Edit
                     </button>
                     <button class="btn btn-sm btn-outline-danger" @onclick="@(() => DeleteItem(context.Id))">
@@ -39,45 +43,9 @@
                     </button>
                 </TemplateColumn>
             </QuickGrid>
-            @* <div class="table-responsive">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Status</th>
-                            <th>Created</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var item in items)
-                        {
-                            <tr>
-                                <td>@item.Name</td>
-                                <td>
-                                    <span class="badge @(item.IsActive ? "bg-success" : "bg-secondary")">
-                                        @(item.IsActive ? "Active" : "Inactive")
-                                    </span>
-                                </td>
-                                <td>@item.UpdatedDateTimeUtc.ToString("MMM dd, yyyy")</td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-primary me-1"
-                                            @onclick="() => ShowEditModal(item)">
-                                       ✏️ Edit
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-danger"
-                                            @onclick="() => DeleteItem(item.Id)">
-                                        🗑️ Delete
-                                    </button>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div> *@
         }
     </div>
-</div>  
+</div>
 
 @* Modal for Add/Edit *@
 @if (showModal)
@@ -162,7 +130,7 @@
             if (editingItem.Id == Guid.Empty)
             {
                 await Repository.CreateAsync(editingItem);
-            }       
+            }
             else
             {
                 await Repository.UpdateAsync(editingItem);
