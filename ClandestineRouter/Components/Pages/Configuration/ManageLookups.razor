@@ -4,6 +4,7 @@
 @using ClandestineRouter.Services
 @using Microsoft.AspNetCore.Http.Extensions
 @using Microsoft.Extensions.Primitives
+@rendermode InteractiveServer
 
 <PageTitle>@PageTitle</PageTitle>
 
@@ -14,12 +15,11 @@
             @if (LookupId is null)
             {
                 <p>Select a lookup to manage</p>
-                <ul class="list-group">
-                    @foreach (var lookup in LookupTypes)
-                    {
-                    <li class="list-group"><a href="@($"{NavigationManager.ToBaseRelativePath(NavigationManager.Uri)}?id={lookup.TLookup}")">@lookup.DisplayText</a></li>
-                    }
-                </ul>
+                <QuickGrid Items="@GridItems" Class="table table-responsive table-hover"> 
+                    <TemplateColumn Title="Lookups">
+                        <a class="btn btn-link text-decoration-none" href="@($"{NavigationManager.ToBaseRelativePath(NavigationManager.Uri)}?id={context.TLookup}")">@context.DisplayText</a>
+                    </TemplateColumn>
+                </QuickGrid>
             }
             else
             {
@@ -31,12 +31,14 @@
                     case "SocialMediaApp":
                         <ClandestineRouter.Components.Lookup.LookupManager TLookup="SocialMediaApp" />
                         break;
+                    case "BehaviorType":
+                        <ClandestineRouter.Components.Lookup.LookupManager TLookup="BehaviorType" />
+                    break;
                     default:
                         <p>Unknown lookup type: @LookupId</p>;
                         break;
                 }
             }
-
     </diav>
 </div>
 
@@ -45,16 +47,22 @@
 
     private readonly List<LookupOption> LookupTypes = [
         new LookupOption
-        { 
-            TLookup = "EncounterType", 
+        {
+            TLookup = "EncounterType",
             DisplayText = "Encounter types",
         },
         new LookupOption
         {
-            TLookup = "SocialMediaApp", 
+            TLookup = "SocialMediaApp",
             DisplayText = "Social media apps",
         },
+        new LookupOption {
+            TLookup = "BehaviorType",
+            DisplayText = "Behavior types",
+        }
     ];
+
+    private IQueryable<LookupOption>? GridItems;
 
     [Inject]
     public NavigationManager NavigationManager { get; set; } = default!;
@@ -68,35 +76,37 @@
     [SupplyParameterFromForm]
     private InputModel Input { get; set; } = new();
 
-    @code {
-        // Add this property to inject the BreadcrumbService instance
-        [Inject]
-        public BreadcrumbService BreadcrumbService { get; set; } = default!;
+    [Inject]
+    public BreadcrumbService BreadcrumbService { get; set; } = default!;
 
-        protected override void OnInitialized() =>
-            // Use the injected instance to call SetBreadcrumbs
-            BreadcrumbService.SetBreadcrumbs(
-                new BreadcrumbItem { Text = "Home", Href = "/", Icon = "🏠" },
-                new BreadcrumbItem { Text = "Manage lookups", Href = "/configuration/manage-lookups", Icon = "⚙️" }
-            );
+    protected override void OnInitialized()
+    {
+        BreadcrumbService.SetBreadcrumbs(
+            new BreadcrumbItem { Text = "Home", Href = "/", Icon = "🏠" },
+            new BreadcrumbItem { Text = "Manage lookups", Href = "/configuration/manage-lookups", Icon = "⚙️" }
+        );
 
-        // ... rest of your code remains unchanged ...
+        GridItems = LookupTypes.AsQueryable();
     }
 
     protected override void OnParametersSet()
     {
-    if (LookupId is null) return; 
+        if (LookupId is null) return;
 
-    var lookup = LookupTypes.FirstOrDefault(x => x.TLookup.Equals(LookupId, StringComparison.OrdinalIgnoreCase));
-    if (lookup is null)
-    {
-        NavigationManager.NavigateTo("/configuration/manage-lookups");
-        return;
+        var lookup = LookupTypes.FirstOrDefault(x => x.TLookup.Equals(LookupId, StringComparison.OrdinalIgnoreCase));
+        if (lookup is null)
+        {
+            NavigationManager.NavigateTo("/configuration/manage-lookups");
+            return;
+        }
+
+        PageTitle = $"Manage {lookup.DisplayText}";
+
+        BreadcrumbService.AddBreadcrumb(
+            new BreadcrumbItem { Text = lookup.DisplayText, Href = NavigationManager.Uri, Icon = "✏️" }
+            );
     }
 
-    PageTitle = $"Manage {lookup.DisplayText}";
-    BreadcrumbService.AddBreadcrumb(new BreadcrumbItem { Text = lookup.DisplayText, Href = NavigationManager.Uri, Icon = "✏️" });
-    }
     private sealed class LookupOption
     {
         public string TLookup { get; set; } = string.Empty;
@@ -108,5 +118,4 @@
         [Required, Display(Name = "Lookup to manage")]
         public string? SelectedLookup { get; set; }
     }
-
 }

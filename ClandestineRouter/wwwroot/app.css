@@ -59,7 +59,7 @@ h1:focus {
     text-align: start;
 }
 
-.quickgrid > thead {
+/*.quickgrid > thead {
     position: sticky;
     top: 0;
     background-color: #d8d8d8;
@@ -70,7 +70,7 @@ h1:focus {
 .quickgrid > tbody > tr {
     margin: .25rem;
 }
-
-.quickgrid > tbody > tr:hover {
+*/
+/*.quickgrid > tbody > tr:hover {
     background-color: #CDCDCD;
-}
+}*/

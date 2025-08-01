@@ -3,27 +3,43 @@
 @inject ILookupRepository<TLookup> Repository
 @inject IJSRuntime JSRuntime
 
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">List of options</h5>
-        <button class="btn btn-primary btn-sm" @onclick="ShowAddModal">
-            <i class="fas fa-plus"></i> Add New
-        </button>
-    </div>
-    <div class="card-body">
+<div class="row">
+    <div class="col">
+        <div class="d-flex justify-content-end">
+            <button class="btn btn-primary btn-sm" @onclick="ShowAddModal">
+                <i class="fas fa-plus"></i> Add New
+            </button>
+        </div>
         @if (items == null)
         {
             <div class="text-center">
                 <div class="spinner-border" role="status"></div>
             </div>
         }
-        else if (!items.Any())
+        else if (filteredItems is null || !filteredItems.Any())
         {
             <p class="text-muted">No items found.</p>
         }
         else
         {
-            <div class="table-responsive">
+            <QuickGrid Items="filteredItems" Class="table table-hover table-responsive">
+                <PropertyColumn Property="@(i => i.Name)" />
+                <TemplateColumn Title="Status">
+                    <span class="badge @(context.IsActive ? "bg-success" : "bg-secondary")">
+                        @(context.IsActive ? "Active" : "Inactive")
+                    </span>
+                </TemplateColumn>
+                <PropertyColumn Property="u => u.UpdatedDateTimeUtc" Format="MM/dd/yyyy hh:mm tt" Title="Updated" />
+                <TemplateColumn Title="Actions">
+                    <button class="btn btn-sm btn-outline-primary me-1" @onclick="@(() => ShowEditModal(context))" >
+                        ✏️ Edit
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" @onclick="@(() => DeleteItem(context.Id))">
+                        🗑️ Delete
+                    </button>
+                </TemplateColumn>
+            </QuickGrid>
+            @* <div class="table-responsive">
                 <table class="table table-striped">
                     <thead>
                         <tr>
@@ -58,10 +74,10 @@
                         }
                     </tbody>
                 </table>
-            </div>
+            </div> *@
         }
     </div>
-</div>
+</div>  
 
 @* Modal for Add/Edit *@
 @if (showModal)
@@ -100,6 +116,7 @@
 
 @code {
     private List<TLookup>? items;
+    private IQueryable<TLookup>? filteredItems;
     private bool showModal = false;
     private TLookup editingItem = new();
 
@@ -111,11 +128,13 @@
     private async Task LoadItems()
     {
         items = await Repository.GetAllAsync();
+        filteredItems = items.AsQueryable();
     }
 
     private void ShowAddModal()
     {
         editingItem = new TLookup();
+        editingItem.IsActive = true;
         showModal = true;
     }
 
