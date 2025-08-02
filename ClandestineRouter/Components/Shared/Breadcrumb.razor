@@ -3,35 +3,39 @@
 @implements IDisposable
 @inject BreadcrumbService BreadcrumbService
 
-<nav aria-label="breadcrumb" class="breadcrumb-nav">
-    <ol class="breadcrumb">
-        @foreach (var item in BreadcrumbService.Breadcrumbs)
-        {
-            <li class="breadcrumb-item @(item.IsActive ? "active" : "")">
-                @if (!string.IsNullOrEmpty(item.Href) && !item.IsActive)
-                {
-                    <a href="@item.Href" class="breadcrumb-link">
+@if (AutoShow)
+{
+    <nav aria-label="breadcrumb" class="breadcrumb-nav">
+        <ol class="breadcrumb">
+            @foreach (var item in BreadcrumbService.Breadcrumbs)
+            {
+                <li class="breadcrumb-item @(item.IsActive ? "active" : "")">
+                    @if (!string.IsNullOrEmpty(item.Href) && !item.IsActive)
+                    {
+                        <a href="@item.Href" class="breadcrumb-link">
+                            @if (!string.IsNullOrEmpty(item.Icon))
+                            {
+                                <span class="breadcrumb-icon">@item.Icon</span>
+                            }
+                            @item.Text
+                        </a>
+                    }
+                    else
+                    {
                         @if (!string.IsNullOrEmpty(item.Icon))
                         {
                             <span class="breadcrumb-icon">@item.Icon</span>
                         }
-                        @item.Text
-                    </a>
-                }
-                else
-                {
-                    @if (!string.IsNullOrEmpty(item.Icon))
-                    {
-                        <span class="breadcrumb-icon">@item.Icon</span>
+                        <span class="breadcrumb-text">@item.Text</span>
                     }
-                    <span class="breadcrumb-text">@item.Text</span>
-                }
-            </li>
-        }
-    </ol>
-</nav>
+                </li>
+            }
+        </ol>
+    </nav>
+}
 
 @code {
+    private bool AutoShow => BreadcrumbService.Breadcrumbs.Count > 0;
     protected override void OnInitialized()
     {
         BreadcrumbService.OnBreadcrumbsChanged += StateHasChanged;

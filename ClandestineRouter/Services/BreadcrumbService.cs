@@ -19,19 +19,6 @@ public class BreadcrumbService : IDisposable
         _navigationManager.LocationChanged += OnLocationChanged;
     }
 
-    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
-    {
-        GenerateBreadcrumbs(e.Location);
-        OnBreadcrumbsChanged?.Invoke();
-    }
-
-    public void SetBreadcrumbs(params BreadcrumbItem[] breadcrumbs)
-    {
-        _breadcrumbs.Clear();
-        _breadcrumbs.AddRange(breadcrumbs);
-        OnBreadcrumbsChanged?.Invoke();
-    }
-
     public void AddBreadcrumb(BreadcrumbItem breadcrumb)
     {
         _breadcrumbs.Add(breadcrumb);
@@ -41,6 +28,24 @@ public class BreadcrumbService : IDisposable
     public void ClearBreadcrumbs()
     {
         _breadcrumbs.Clear();
+        OnBreadcrumbsChanged?.Invoke();
+    }
+
+    public void Dispose()
+    {
+        _navigationManager.LocationChanged -= OnLocationChanged;
+    }
+
+    public void SetBreadcrumbs(params BreadcrumbItem[] breadcrumbs)
+    {
+        _breadcrumbs.Clear();
+        _breadcrumbs.AddRange(breadcrumbs);
+        OnBreadcrumbsChanged?.Invoke();
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        GenerateBreadcrumbs(e.Location);
         OnBreadcrumbsChanged?.Invoke();
     }
 
@@ -82,10 +87,5 @@ public class BreadcrumbService : IDisposable
                      .Split(' ')
                      .Select(word => char.ToUpper(word[0]) + word[1..].ToLower())
                      .Aggregate((a, b) => a + " " + b);
-    }
-
-    public void Dispose()
-    {
-        _navigationManager.LocationChanged -= OnLocationChanged;
     }
 }
