@@ -1,0 +1,82 @@
+﻿@page "/example"
+@using ClandestineRouter.Services
+@inject FeedbackService FeedbackService
+@inject BreadcrumbService BreadcrumbService
+@rendermode InteractiveServer
+
+<h3>Feedback Service Example</h3>
+
+<div class="row">
+    <div class="col-md-6">
+        <h5>Toast Notifications</h5>
+        <button class="btn btn-success me-2 mb-2" @onclick="ShowSuccessToast">Success Toast</button>
+        <button class="btn btn-danger me-2 mb-2" @onclick="ShowErrorToast">Error Toast</button>
+        <button class="btn btn-warning me-2 mb-2" @onclick="ShowWarningToast">Warning Toast</button>
+        <button class="btn btn-info me-2 mb-2" @onclick="ShowInfoToast">Info Toast</button>
+    </div>
+
+    <div class="col-md-6">
+        <h5>Alert Bars</h5>
+        <button class="btn btn-outline-success me-2 mb-2" @onclick="ShowSuccessAlert">Success Alert</button>
+        <button class="btn btn-outline-danger me-2 mb-2" @onclick="ShowErrorAlert">Error Alert</button>
+        <button class="btn btn-outline-warning me-2 mb-2" @onclick="ShowWarningAlert">Warning Alert</button>
+        <button class="btn btn-outline-info me-2 mb-2" @onclick="ShowInfoAlert">Info Alert</button>
+    </div>
+</div>
+
+<div class="mt-3">
+    <button class="btn btn-secondary me-2" @onclick="ClearAll">Clear All</button>
+    <button class="btn btn-outline-secondary" @onclick="ClearAlerts">Clear Alerts Only</button>
+</div>
+
+@code {
+    private void ShowSuccessToast()
+    {
+        FeedbackService.ShowSuccess("Operation completed successfully!", "Great!");
+    }
+
+    private void ShowErrorToast()
+    {
+        FeedbackService.ShowError("Something went wrong. Please try again.", "Oops!");
+    }
+
+    private void ShowWarningToast()
+    {
+        FeedbackService.ShowWarning("Please review your input before proceeding.", "Hold on!");
+    }
+
+    private void ShowInfoToast()
+    {
+        FeedbackService.ShowInfo("Here's some helpful information for you.", "FYI");
+    }
+
+    private void ShowSuccessAlert()
+    {
+        FeedbackService.ShowSuccessAlert("Your changes have been saved successfully.", "Saved!");
+    }
+
+    private void ShowErrorAlert()
+    {
+        FeedbackService.ShowErrorAlert("Failed to connect to the server. Check your connection.", "Connection Error", persistent: true);
+    }
+
+    private void ShowWarningAlert()
+    {
+        FeedbackService.ShowWarningAlert("Your session will expire in 5 minutes.", "Session Warning");
+    }
+
+    private void ShowInfoAlert()
+    {
+        FeedbackService.ShowInfoAlert("New features are available. Check them out!", "Update Available");
+    }
+
+    private void ClearAll()
+    {
+        FeedbackService.ClearAll();
+    }
+
+    private void ClearAlerts()
+    {
+        FeedbackService.ClearAlerts();
+    }
+}

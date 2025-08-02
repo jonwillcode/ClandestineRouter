@@ -1,0 +1,67 @@
+﻿@using ClandestineRouter.Common.Enums
+@using ClandestineRouter.Services
+@using Microsoft.AspNetCore.Components
+@inject FeedbackService FeedbackService
+@implements IDisposable
+@rendermode InteractiveServer
+
+<div class="feedback-alert-container">
+    @foreach (var message in FeedbackService.AlertMessages)
+    {
+        <div class="alert alert-@GetBootstrapClass(message.Type) feedback-alert fade-in"
+             role="alert">
+            <div class="d-flex align-items-center">
+                <div class="feedback-alert-icon me-2">
+                    @GetIcon(message.Type)
+                </div>
+                <div class="flex-grow-1">
+                    @if (!string.IsNullOrEmpty(message.Title))
+                    {
+                        <h6 class="alert-heading mb-1">@message.Title</h6>
+                    }
+                    @if (!string.IsNullOrEmpty(message.Message))
+                    {
+                        <div>@message.Message</div>
+                    }
+                </div>
+                <button type="button" class="btn-close" @onclick="() => CloseAlert(message.Id)"></button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        Console.WriteLine("FeedbackAlert initialized.");
+        FeedbackService.OnChange += StateHasChanged;
+    }
+
+    private void CloseAlert(Guid id)
+    {
+        FeedbackService.RemoveAlertMessage(id);
+    }
+
+    private string GetBootstrapClass(FeedbackType type) => type switch
+    {
+        FeedbackType.Success => "success",
+        FeedbackType.Error => "danger",
+        FeedbackType.Warning => "warning",
+        FeedbackType.Info => "info",
+        _ => "info"
+    };
+
+    private MarkupString GetIcon(FeedbackType type) => type switch
+    {
+        FeedbackType.Success => new MarkupString("<i class='bi bi-check-circle-fill'></i>"),
+        FeedbackType.Error => new MarkupString("<i class='bi bi-exclamation-triangle-fill'></i>"),
+        FeedbackType.Warning => new MarkupString("<i class='bi bi-exclamation-triangle-fill'></i>"),
+        FeedbackType.Info => new MarkupString("<i class='bi bi-info-circle-fill'></i>"),
+        _ => new MarkupString("<i class='bi bi-info-circle-fill'></i>")
+    };
+
+    public void Dispose()
+    {
+        FeedbackService.OnChange -= StateHasChanged;
+    }
+}

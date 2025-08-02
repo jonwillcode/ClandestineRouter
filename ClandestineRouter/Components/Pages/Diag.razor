@@ -1,0 +1,143 @@
+﻿@page "/diagnostic"
+@using ClandestineRouter.Services
+@inject FeedbackService FeedbackService
+@rendermode InteractiveServer
+
+<h3>Diagnostic Test Page</h3>
+
+<div class="alert alert-info">
+    <h5>Step 1: Basic Click Test</h5>
+    <button class="btn btn-primary" @onclick="BasicTest">Basic Test Button</button>
+    <p>Last clicked: @lastClick</p>
+</div>
+
+<div class="alert alert-warning">
+    <h5>Step 2: Service Test</h5>
+    <button class="btn btn-success" @onclick="TestService">Test Service</button>
+    <p>Service available: @serviceAvailable</p>
+    <p>Messages count: @messageCount</p>
+    <p>Alert messages count: @alertCount</p>
+</div>
+
+<div class="alert alert-secondary">
+    <h5>Step 3: Manual Message Test</h5>
+    <button class="btn btn-warning" @onclick="AddManualMessage">Add Manual Message</button>
+    <p>Manual test result: @manualResult</p>
+</div>
+
+<div class="alert alert-primary">
+    <h5>Step 4: Component Render Test</h5>
+    <p>Below should show components if they're working:</p>
+    
+    @* Inline alert test *@
+    <div style="border: 2px solid red; padding: 10px; margin: 10px;">
+        <strong>Alert Component Test:</strong>
+        <ClandestineRouter.Components.Shared.FeedbackAlert />
+    </div>
+    
+    @* Inline toast test *@
+    <div style="border: 2px solid blue; padding: 10px; margin: 10px;">
+        <strong>Toast Component Test:</strong>
+        <ClandestineRouter.Components.Shared.FeedbackToast />
+    </div>
+</div>
+
+<div class="alert alert-success">
+    <h5>Step 5: Raw Messages Display</h5>
+    <p><strong>Raw Messages in Service:</strong></p>
+    @if (FeedbackService.Messages.Any())
+    {
+        <ul>
+            @foreach (var msg in FeedbackService.Messages)
+            {
+                <li>@msg.Type: @msg.Title - @msg.Message</li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p>No messages in service</p>
+    }
+    
+    <p><strong>Raw Alert Messages in Service:</strong></p>
+    @if (FeedbackService.AlertMessages.Any())
+    {
+        <ul>
+            @foreach (var msg in FeedbackService.AlertMessages)
+            {
+                <li>@msg.Type: @msg.Title - @msg.Message</li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p>No alert messages in service</p>
+    }
+</div>
+
+@code {
+    private string lastClick = "None";
+    private string serviceAvailable = "Unknown";
+    private int messageCount = 0;
+    private int alertCount = 0;
+    private string manualResult = "Not tested";
+
+    protected override void OnInitialized()
+    {
+        try
+        {
+            serviceAvailable = FeedbackService != null ? "YES" : "NO";
+            messageCount = FeedbackService?.Messages?.Count ?? -1;
+            alertCount = FeedbackService?.AlertMessages?.Count ?? -1;
+        }
+        catch (Exception ex)
+        {
+            serviceAvailable = $"ERROR: {ex.Message}";
+        }
+    }
+
+    private void BasicTest()
+    {
+        lastClick = DateTime.Now.ToString("HH:mm:ss");
+    }
+
+    private void TestService()
+    {
+        try
+        {
+            if (FeedbackService == null)
+            {
+                manualResult = "Service is null!";
+                return;
+            }
+
+            var beforeCount = FeedbackService.Messages.Count;
+            FeedbackService.ShowSuccess("Test message", "Test");
+            var afterCount = FeedbackService.Messages.Count;
+            
+            messageCount = afterCount;
+            manualResult = $"Before: {beforeCount}, After: {afterCount}";
+            
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            manualResult = $"Exception: {ex.Message}";
+        }
+    }
+
+    private void AddManualMessage()
+    {
+        try
+        {
+            FeedbackService.ShowSuccessAlert("Manual alert test", "Manual Test");
+            alertCount = FeedbackService.AlertMessages.Count;
+            manualResult = $"Added alert, count now: {alertCount}";
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            manualResult = $"Manual test failed: {ex.Message}";
+        }
+    }
+}

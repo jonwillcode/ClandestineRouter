@@ -1,4 +1,4 @@
-﻿using ClandestineRouter.Models;
+﻿using ClandestineRouter.Common.Models;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
 
