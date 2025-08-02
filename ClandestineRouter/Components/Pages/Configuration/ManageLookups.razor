@@ -43,7 +43,8 @@
 </div>
 
 @code {
-    private string PageTitle = "Select a lookup";
+    private const string DefaultPageTitle = "Manage lookups";
+    private string PageTitle = DefaultPageTitle;
 
     private readonly List<LookupOption> LookupTypes = [
         new LookupOption
@@ -91,7 +92,11 @@
 
     protected override void OnParametersSet()
     {
-        if (LookupId is null) return;
+        if (LookupId is null)
+        {
+            PageTitle = DefaultPageTitle;
+            return;
+        }
 
         var lookup = LookupTypes.FirstOrDefault(x => x.TLookup.Equals(LookupId, StringComparison.OrdinalIgnoreCase));
         if (lookup is null)

@@ -54,7 +54,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">@(editingItem.Id == Guid.Empty ? "Add" : "Edit") @typeof(TLookup).Name</h5>
+                    <h5 class="modal-title">@(editingItem.Id == Guid.Empty ? "Add" : "Edit") @editingItem.Name.ToLower() </h5>
                     <button type="button" class="btn-close" @onclick="HideModal"></button>
                 </div>
                 <div class="modal-body">
@@ -95,6 +95,7 @@
 
     private async Task LoadItems()
     {
+        await Task.Delay(1000);
         items = await Repository.GetAllAsync();
         filteredItems = items.AsQueryable();
     }

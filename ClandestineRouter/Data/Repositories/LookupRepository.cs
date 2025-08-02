@@ -42,6 +42,8 @@ public class LookupRepository<T>(ApplicationDbContext context) : ILookupReposito
             entity.Id = Guid.NewGuid();
         }
 
+        entity.CreatedDateTimeUtc = DateTime.UtcNow;
+        entity.UpdatedDateTimeUtc = DateTime.UtcNow;
         _dbSet.Add(entity);
         await _dbContext.SaveChangesAsync();
         return entity;
@@ -60,28 +62,10 @@ public class LookupRepository<T>(ApplicationDbContext context) : ILookupReposito
         existingEntity.Name = entity.Name;
         existingEntity.IsActive = entity.IsActive;
 
-        // Update timestamp if your IBaseLookupModel has it
-        if (existingEntity.GetType().GetProperty("UpdatedDateTimeUtc") != null)
-        {
-            existingEntity.GetType().GetProperty("UpdatedDateTimeUtc")?.SetValue(existingEntity, DateTime.UtcNow);
-        }
+        existingEntity.GetType().GetProperty("UpdatedDateTimeUtc")?.SetValue(existingEntity, DateTime.UtcNow);
 
         await _dbContext.SaveChangesAsync();
         return existingEntity;
-
-        // Option 2: Alternative approach using Entry (if you prefer)
-        /*
-        _dbContext.Entry(entity).State = EntityState.Modified;
-        
-        // Set timestamp if applicable
-        if (entity.GetType().GetProperty("UpdatedDateTimeUtc") != null)
-        {
-            entity.GetType().GetProperty("UpdatedDateTimeUtc")?.SetValue(entity, DateTime.UtcNow);
-        }
-        
-        await _dbContext.SaveChangesAsync();
-        return entity;
-        */
     }
 
     public async Task DeleteAsync(Guid id)
