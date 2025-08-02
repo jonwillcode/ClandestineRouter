@@ -42,9 +42,9 @@ h1:focus {
     color: white;
 }
 
-    .blazor-error-boundary::after {
-        content: "An error has occurred."
-    }
+.blazor-error-boundary::after {
+    content: "An error has occurred."
+}
 
 .darker-border-checkbox.form-check-input {
     border-color: #929292;
@@ -59,18 +59,8 @@ h1:focus {
     text-align: start;
 }
 
-/*.quickgrid > thead {
-    position: sticky;
-    top: 0;
-    background-color: #d8d8d8;
-    outline: 1px solid gray;
-    z-index: 1;
+.textarea-lrg {
+    overflow-y: auto;
+    min-height: 200px !important; /* TODO Fix this does it doesn't use important */
+    max-height: 500px;
 }
-
-.quickgrid > tbody > tr {
-    margin: .25rem;
-}
-*/
-/*.quickgrid > tbody > tr:hover {
-    background-color: #CDCDCD;
-}*/

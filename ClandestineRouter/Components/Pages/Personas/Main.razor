@@ -1,0 +1,33 @@
+﻿@page "/personas"
+@using ClandestineRouter.Models
+@using ClandestineRouter.Services
+
+<PageTitle>@pageTitle</PageTitle>
+
+<h1>@pageTitle</h1>
+
+<div class="row">
+    <div class="col">
+        <div class="d-flex justify-content-start">
+            <NavLink class="btn btn-primary btn-sm" href="personas/add">
+                <i class="fas fa-plus"></i> Add New
+            </NavLink>
+        </div>
+    </div>
+</div>
+
+@code {
+    private const string pageTitle = "Personas";
+
+    [Inject]
+    public BreadcrumbService BreadcrumbService { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        BreadcrumbService.SetBreadcrumbs(
+            new BreadcrumbItem { Text = "Home", Href = "/", Icon = "🏠" },
+            new BreadcrumbItem { Text = "Personas", Href = "/personas", Icon = "🧑‍🤝‍🧑" }
+        );
+
+    }
+}
