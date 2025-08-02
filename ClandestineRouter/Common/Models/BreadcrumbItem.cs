@@ -1,4 +1,4 @@
-﻿namespace ClandestineRouter.Models;
+﻿namespace ClandestineRouter.Common.Models;
 
 public class BreadcrumbItem
 {

@@ -1,0 +1,66 @@
+﻿@using ClandestineRouter.Common.Enums
+@using ClandestineRouter.Services
+@using Microsoft.AspNetCore.Components
+@inject FeedbackService FeedbackService
+@implements IDisposable
+@rendermode InteractiveServer
+
+<div class="feedback-toast-container">
+    @foreach (var message in FeedbackService.Messages)
+    {
+        <div class="feedback-toast feedback-toast-@GetTypeClass(message.Type) fade-in"
+             role="alert" aria-live="polite">
+            <div class="feedback-toast-header">
+                <div class="feedback-icon">
+                    @GetIcon(message.Type)
+                </div>
+                <strong class="feedback-title">@message.Title</strong>
+                <button type="button" class="feedback-close" @onclick="() => CloseToast(message.Id)">
+                    <span>&times;</span>
+                </button>
+            </div>
+            @if (!string.IsNullOrEmpty(message.Message))
+            {
+                <div class="feedback-toast-body">
+                    @message.Message
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        FeedbackService.OnChange += StateHasChanged;
+        Console.WriteLine("FeedbackToast initialized."); 
+    }
+
+    private void CloseToast(Guid id)
+    {
+        FeedbackService.RemoveMessage(id);
+    }
+
+    private string GetTypeClass(FeedbackType type) => type switch
+    {
+        FeedbackType.Success => "success",
+        FeedbackType.Error => "error",
+        FeedbackType.Warning => "warning",
+        FeedbackType.Info => "info",
+        _ => "info"
+    };
+
+    private MarkupString GetIcon(FeedbackType type) => type switch
+    {
+        FeedbackType.Success => new MarkupString("✓"),
+        FeedbackType.Error => new MarkupString("✕"),
+        FeedbackType.Warning => new MarkupString("⚠"),
+        FeedbackType.Info => new MarkupString("ℹ"),
+        _ => new MarkupString("ℹ")
+    };
+
+    public void Dispose()
+    {
+        FeedbackService.OnChange -= StateHasChanged;
+    }
+}
