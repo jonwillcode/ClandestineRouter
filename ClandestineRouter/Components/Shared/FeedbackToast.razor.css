@@ -147,8 +147,24 @@
     }
 }
 
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+}
+
 .fade-in {
     animation: fadeIn 0.3s ease-out;
+}
+
+.toast-auto-dismiss {
+    animation: slideInRight 0.3s ease-out, fadeOut 0.5s ease-in var(--duration, 5000ms) forwards;
 }
 
 @keyframes fadeIn {

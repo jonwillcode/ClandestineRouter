@@ -1,15 +1,19 @@
-﻿@using ClandestineRouter.Common.Enums
+﻿@using Microsoft.AspNetCore.Components
+@using ClandestineRouter.Common.Enums
 @using ClandestineRouter.Services
-@using Microsoft.AspNetCore.Components
 @inject FeedbackService FeedbackService
+@inject IJSRuntime JSRuntime
 @implements IDisposable
 @rendermode InteractiveServer
 
 <div class="feedback-toast-container">
     @foreach (var message in FeedbackService.Messages)
     {
-        <div class="feedback-toast feedback-toast-@GetTypeClass(message.Type) fade-in"
-             role="alert" aria-live="polite">
+        <div class="feedback-toast feedback-toast-@GetTypeClass(message.Type)"
+             role="alert" aria-live="polite"
+             data-message-id="@message.Id"
+             data-duration="@message.Duration"
+             data-persistent="@message.IsPersistent.ToString().ToLower()">
             <div class="feedback-toast-header">
                 <div class="feedback-icon">
                     @GetIcon(message.Type)
@@ -30,15 +34,69 @@
 </div>
 
 @code {
+    private IJSObjectReference? _jsModule;
+    private bool _jsReady = false;
+
     protected override void OnInitialized()
     {
-        FeedbackService.OnChange += StateHasChanged;
-        Console.WriteLine("FeedbackToast initialized."); 
+        FeedbackService.OnChange += OnMessagesChanged;
     }
 
-    private void CloseToast(Guid id)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        FeedbackService.RemoveMessage(id);
+        if (firstRender)
+        {
+            try
+            {
+                // Load our JavaScript module after first render
+                _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/toast-manager.js");
+                _jsReady = true;
+
+                // Initialize existing toasts
+                if (_jsModule != null)
+                {
+                    await _jsModule.InvokeVoidAsync("initializeToasts");
+                }
+            }
+            catch (Exception ex)
+            {
+                // Handle JS interop errors gracefully
+                Console.WriteLine($"Failed to load toast manager: {ex.Message}");
+            }
+        }
+        else if (_jsReady && _jsModule != null)
+        {
+            // Re-initialize toasts after state changes
+            try
+            {
+                await _jsModule.InvokeVoidAsync("initializeToasts");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to initialize toasts: {ex.Message}");
+            }
+        }
+    }
+
+    private async void OnMessagesChanged()
+    {
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task CloseToast(Guid id)
+    {
+        if (_jsReady && _jsModule != null)
+        {
+            try
+            {
+                // Pure client-side close - no server state update needed
+                await _jsModule.InvokeVoidAsync("closeToast", id);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to close toast: {ex.Message}");
+            }
+        }
     }
 
     private string GetTypeClass(FeedbackType type) => type switch
@@ -59,8 +117,20 @@
         _ => new MarkupString("ℹ")
     };
 
-    public void Dispose()
+    public async void Dispose()
     {
-        FeedbackService.OnChange -= StateHasChanged;
+        FeedbackService.OnChange -= OnMessagesChanged;
+
+        if (_jsModule != null)
+        {
+            try
+            {
+                await _jsModule.DisposeAsync();
+            }
+            catch
+            {
+                // Ignore disposal errors
+            }
+        }
     }
 }

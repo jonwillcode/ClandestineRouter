@@ -2,6 +2,9 @@
 @using ClandestineRouter.Common.Models
 @using ClandestineRouter.Services
 @using System.ComponentModel.DataAnnotations
+@inject ApplicationDbContext DbContext
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
 
 <PageTitle>@PageTitle</PageTitle>
 
@@ -26,7 +29,7 @@
                 <ValidationMessage For="() => Input.Notes" class="text-danger" />
             </div>
             <div class="d-flex justify-content-end">
-                <button type="submit" class="btn btn-primary">Save</button>
+                <button type="submit" class="btn btn-primary" disabled="@IsWorking">Save</button>
             </div>
         </EditForm>
     </div>
@@ -34,9 +37,15 @@
 
 @code {
     private const string PageTitle = "Add persona";
+    private string? name;
+    private string? notes;
+    private bool IsWorking = false;
 
     [Inject]
     public BreadcrumbService BreadcrumbService { get; set; } = default!;
+
+    [Inject]
+    public FeedbackService FeedbackService { get; set; } = default!;
 
     [SupplyParameterFromForm]
     private InputModel Input { get; set; } = new();
@@ -48,6 +57,9 @@
             new BreadcrumbItem { Text = "Personas", Href = "/personas", Icon = "🧑‍🤝‍🧑" },
             new BreadcrumbItem { Text = "Add", Href = "/personas/add", Icon = "➕" }
         );
+
+        name = Input.Name;
+        notes = Input.Notes;
     }
 
     private sealed class InputModel
@@ -58,8 +70,17 @@
         //TODO Probably need to add a max length here
         public string? Notes { get; set; }
     }
-    private void HandleOnValidSubmitAsync(EditContext args)
+    private async Task HandleOnValidSubmitAsync(EditContext args)
     {
-        throw new NotImplementedException();
+        IsWorking = true;
+        var newPersona = new Persona
+        {
+            Name = Input.Name,
+            Notes = Input.Notes
+        };
+        await DbContext.Personas.AddAsync(newPersona);
+        await DbContext.SaveChangesAsync();
+        FeedbackService.ShowSuccess("Persona added successfully!", "Success");
+        NavigationManager.NavigateTo("/personas");
     }
 }
