@@ -1,0 +1,185 @@
+﻿@page "/personas/edit"
+@using ClandestineRouter.Common.Models
+@using ClandestineRouter.Services
+@using System.ComponentModel.DataAnnotations
+@inject ApplicationDbContext DbContext
+@inject BreadcrumbService BreadcrumbService
+@inject FeedbackService FeedbackService
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>@PageTitle</PageTitle>
+
+
+@if (personaFound)
+{
+    <h1>@PageTitle</h1>
+    <div class="row">
+        <div class="col-lg-6">
+            <NavigationLock ConfirmExternalNavigation="hasUnsavedChanges" />
+            <EditForm Model="Input" FormName="PersonaAdd" OnValidSubmit="HandleOnValidSubmitAsync">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" role="alert" />
+
+                <div class="form-floating mb-3">
+                    <InputText @bind-Value="Input.Name" id="Input.Name" class="form-control" placeholder="Enter a name" />
+                    <label for="Input.Name" class="form-label">Persona name</label>
+                    <ValidationMessage For="() => Input.Name" class="text-danger" />
+                </div>
+
+                <div class="form-floating mb-3">
+                    <InputTextArea @bind-Value="Input.Notes" id="Input.Notes" class="form-control textarea-lrg" placeholder="Enter any notes for this persona" />
+                    <label for="Input.Notes" class="form-label">Notes</label>
+                    <ValidationMessage For="() => Input.Notes" class="text-danger" />
+                </div>
+                <div class="d-flex justify-content-start gap-2">
+                    <button type="submit" class="btn btn-primary" disabled="@IsWorking">Save</button>
+                    <a href="/personas" class="btn btn-outline-secondary" disabled="true">Cancel</a>
+                    <button type="button" class="btn btn-outline-danger ms-auto" disabled="@IsWorking" @onclick="() => HandleDeletePersona()">Delete</button>
+                </div>
+            </EditForm>
+            @if (EditPersonaGuid.HasValue)
+            {
+                <div class="mt-3 text-muted">
+                    <p>Created: @createdDateTimeUtc?.ToLocalTime().ToString("g")</p>
+                    <p>Updated: @updatedDateTimeUtc?.ToLocalTime().ToString("g")</p>
+                </div>
+            }
+        </div>
+    </div>
+}
+else
+{
+    <PageTitle>Persona not found</PageTitle>
+    <h1>Persona not found</h1>
+    <p class="text-muted">The persona does not exist or you do not have access to it.</p>
+}
+
+@code {
+    private string PageTitle = "Add persona";
+    private string? name;
+    private string? notes;
+    private DateTime? updatedDateTimeUtc;
+    private DateTime? createdDateTimeUtc;
+    private bool IsWorking = false;
+    private bool hasUnsavedChanges = false; 
+    private bool personaFound = false; 
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    [SupplyParameterFromQuery(Name = "id")]
+    private Guid? EditPersonaGuid { get; set; }
+
+    protected override void OnInitialized()
+    {
+        var isEditMode = EditPersonaGuid.HasValue;
+        if (EditPersonaGuid.HasValue)
+        {
+            var persona = LoadPersona(EditPersonaGuid.Value);
+
+            if (persona is not null)
+                SetComponentState(persona);
+        }
+
+        name = Input.Name;
+        notes = Input.Notes;
+
+        if (isEditMode)
+            PageTitle = $"Edit {Input.Name}";
+        else
+            PageTitle = "Add persona";
+
+        BreadcrumbService.SetBreadcrumbs(
+            new BreadcrumbItem { Text = "Home", Href = "/", Icon = "🏠" },
+            new BreadcrumbItem { Text = "Personas", Href = "/personas", Icon = "🧑‍🤝‍🧑" },
+            new BreadcrumbItem { Text = PageTitle, Href = NavigationManager.Uri, Icon = "✏️" }
+        );
+    }
+    private void SetComponentState(Persona persona)
+    {
+        personaFound = true;
+        createdDateTimeUtc = persona.CreatedDateTimeUtc;
+        updatedDateTimeUtc = persona.UpdatedDateTimeUtc;
+        Input = new InputModel
+            {
+                Name = persona.Name,
+                Notes = persona.Notes,
+            };
+    }
+    private void OnInputChange(ChangeEventArgs args)
+    {
+        hasUnsavedChanges = true;
+        StateHasChanged();
+    }
+    private Persona? LoadPersona(Guid personaGuid)
+    {
+        return DbContext.Personas
+            .FirstOrDefault(p => p.Id == personaGuid);
+    }
+    private async Task HandleOnValidSubmitAsync(EditContext args)
+    {
+        try
+        {
+            IsWorking = true;
+            if (EditPersonaGuid.HasValue)
+            {
+                var existingPersona = await DbContext.Personas.FindAsync(EditPersonaGuid.Value);
+                if (existingPersona is null)
+                {
+                    FeedbackService.ShowError("Persona not found.", "Error");
+                    IsWorking = false;
+                    return;
+                }
+                existingPersona.Name = Input.Name;
+                existingPersona.Notes = Input.Notes;
+                DbContext.Personas.Update(existingPersona);
+            }
+            else
+            {
+                var newPersona = new Persona
+                {
+                    Name = Input.Name,
+                    Notes = Input.Notes
+                };
+                await DbContext.Personas.AddAsync(newPersona);
+            }
+            await DbContext.SaveChangesAsync();
+            hasUnsavedChanges = false;
+            var verb = EditPersonaGuid.HasValue ? "updated" : "added";
+            FeedbackService.ShowSuccess($"Persona {Input.Name} {verb} successfully!", "Success");
+            NavigationManager.NavigateTo("/personas");
+        }
+        catch (Exception)
+        {
+            Console.WriteLine("An error occurred while saving the persona.");
+            FeedbackService.ShowError("An error occurred while saving the persona.", "Error");
+        }
+    }
+    private async Task HandleDeletePersona()
+    {
+        if (EditPersonaGuid.HasValue)
+        {
+            var existingPersona = await DbContext.Personas.FindAsync(EditPersonaGuid.Value);
+            if (existingPersona is not null)
+            {
+                DbContext.Personas.Remove(existingPersona);
+                await DbContext.SaveChangesAsync();
+                FeedbackService.ShowSuccess($"Persona {existingPersona.Name} deleted successfully!", "Success");
+            }
+            else
+            {
+                FeedbackService.ShowError("Persona not found.", "Error");
+            }
+        }
+        NavigationManager.NavigateTo("/personas");
+    }
+    private sealed class InputModel
+    {
+        [Required, MaxLength(256)]
+        public string Name { get; set; } = string.Empty;
+
+        //TODO Probably need to add a max length here
+        public string? Notes { get; set; }
+    }
+}

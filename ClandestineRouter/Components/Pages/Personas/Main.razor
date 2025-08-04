@@ -1,6 +1,7 @@
 ﻿@page "/personas"
 @using ClandestineRouter.Common.Models
 @using ClandestineRouter.Services
+@inject ApplicationDbContext DbContext
 
 <PageTitle>@pageTitle</PageTitle>
 
@@ -8,16 +9,38 @@
 
 <div class="row">
     <div class="col">
+        <p class="text-muted fw-light">Manage your personas here. Personas are used to represent different individuals online.</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col">
         <div class="d-flex justify-content-start">
-            <NavLink class="btn btn-primary btn-sm" href="personas/add">
+            <NavLink class="btn btn-primary btn-sm" href="personas/edit">
                 <i class="fas fa-plus"></i> Add New
             </NavLink>
         </div>
     </div>
 </div>
 
+<div class="row">
+    <div class="col col-md-10 col-lg-10">
+        <QuickGrid Items="personas" Class="table table-hover table-responsive">
+            <PropertyColumn Property="p => p.Name" Title="Name" />
+            <PropertyColumn Property="p => p.UpdatedDateTimeUtc" Title="Updated" Format="MM/dd/yyyy hh:mm tt" />
+                <TemplateColumn Title="Actions">
+                    <a class="btn btn-outline-primary btn-sm" href="@($"personas/edit?id={context.Id}")">
+                        <i class="fas fa-edit"></i> Edit
+                    </a>
+                </TemplateColumn>
+        </QuickGrid>
+    </div>
+</div>
+
+
 @code {
     private const string pageTitle = "Personas";
+    private IQueryable<Persona>? personas;
 
     [Inject]
     public BreadcrumbService BreadcrumbService { get; set; } = default!;
@@ -28,6 +51,11 @@
             new BreadcrumbItem { Text = "Home", Href = "/", Icon = "🏠" },
             new BreadcrumbItem { Text = "Personas", Href = "/personas", Icon = "🧑‍🤝‍🧑" }
         );
+        LoadItems();
+    }
 
+    private void LoadItems()
+    {
+        personas = DbContext.Personas.OrderBy(p => p.Name).AsQueryable();
     }
 }
