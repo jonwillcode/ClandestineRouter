@@ -33,10 +33,15 @@
 @code {
     protected override void OnInitialized()
     {
+        Console.WriteLine("FeedbackAlert initialized.");
         FeedbackService.OnChange += StateHasChanged;
     }
 
-    
+    private void CloseAlert(Guid id)
+    {
+        FeedbackService.RemoveAlertMessage(id);
+    }
+
     private string GetBootstrapClass(FeedbackType type) => type switch
     {
         FeedbackType.Success => "success",

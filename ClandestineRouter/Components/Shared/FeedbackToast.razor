@@ -1,6 +1,7 @@
 ﻿@using Microsoft.AspNetCore.Components
 @using ClandestineRouter.Common.Enums
 @using ClandestineRouter.Services
+@using Microsoft.AspNetCore.Components
 @inject FeedbackService FeedbackService
 @inject IJSRuntime JSRuntime
 @implements IDisposable
@@ -74,7 +75,7 @@
             catch (Exception ex)
             {
                 Console.WriteLine($"Failed to initialize toasts: {ex.Message}");
-            }
+    }
         }
     }
 
@@ -93,7 +94,7 @@
                 await _jsModule.InvokeVoidAsync("closeToast", id);
             }
             catch (Exception ex)
-            {
+    {
                 Console.WriteLine($"Failed to close toast: {ex.Message}");
             }
         }
@@ -128,7 +129,7 @@
                 await _jsModule.DisposeAsync();
             }
             catch
-            {
+    {
                 // Ignore disposal errors
             }
         }
