@@ -1,0 +1,65 @@
+﻿@page "/personas/add"
+@using ClandestineRouter.Common.Models
+@using ClandestineRouter.Services
+@using System.ComponentModel.DataAnnotations
+
+<PageTitle>@PageTitle</PageTitle>
+
+<h1>@PageTitle</h1>
+
+<div class="row">
+    <div class="col-lg-6">
+        <p>Add a new persona</p>
+        <EditForm Model="Input" FormName="PersonaAdd" OnValidSubmit="HandleOnValidSubmitAsync">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert" />
+
+            <div class="form-floating mb-3">
+                <InputText @bind-Value="Input.Name" id="Input.Name" class="form-control" placeholder="Enter a name" />
+                <label for="Input.Name" class="form-label">Persona name</label>
+                <ValidationMessage For="() => Input.Name" class="text-danger" />
+            </div>
+
+            <div class="form-floating mb-3">
+                <InputTextArea @bind-Value="Input.Notes" id="Input.Notes" class="form-control textarea-lrg" placeholder="Enter any notes for this persona" />
+                <label for="Input.Notes" class="form-label">Notes</label>
+                <ValidationMessage For="() => Input.Notes" class="text-danger" />
+            </div>
+            <div class="d-flex justify-content-end">
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    private const string PageTitle = "Add persona";
+
+    [Inject]
+    public BreadcrumbService BreadcrumbService { get; set; } = default!;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    protected override void OnInitialized()
+    {
+        BreadcrumbService.SetBreadcrumbs(
+            new BreadcrumbItem { Text = "Home", Href = "/", Icon = "🏠" },
+            new BreadcrumbItem { Text = "Personas", Href = "/personas", Icon = "🧑‍🤝‍🧑" },
+            new BreadcrumbItem { Text = "Add", Href = "/personas/add", Icon = "➕" }
+        );
+    }
+
+    private sealed class InputModel
+    {
+        [Required, MaxLength(256)]
+        public string Name { get; set; } = string.Empty;
+
+        //TODO Probably need to add a max length here
+        public string? Notes { get; set; }
+    }
+    private void HandleOnValidSubmitAsync(EditContext args)
+    {
+        throw new NotImplementedException();
+    }
+}
