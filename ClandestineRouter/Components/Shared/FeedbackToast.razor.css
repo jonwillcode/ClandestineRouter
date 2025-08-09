@@ -221,3 +221,30 @@
             color: #fff;
         }
 }
+
+/* Toast Animation Classes */
+.toast-slide-in {
+    animation: slideInRight 0.3s ease-out forwards;
+}
+
+.toast-slide-out {
+    animation: slideOutRight 0.3s ease-in forwards;
+}
+
+@keyframes slideOutRight {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+}
+
+/* Ensure toasts start hidden for animation */
+.feedback-toast:not(.toast-initialized) {
+    opacity: 0;
+    transform: translateX(100%);
+}
