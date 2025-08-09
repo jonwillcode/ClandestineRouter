@@ -5,36 +5,37 @@
 @inject ApplicationDbContext DbContext
 @inject BreadcrumbService BreadcrumbService
 @inject FeedbackService FeedbackService
+@inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
 @rendermode InteractiveServer
 
 <PageTitle>@PageTitle</PageTitle>
 
+<NavigationLock ConfirmExternalNavigation="hasUnsavedChanges" OnBeforeInternalNavigation="HandleOnBeforeInternalNavigation" />
 
 @if (personaFound)
 {
     <h1>@PageTitle</h1>
     <div class="row">
         <div class="col-lg-6">
-            <NavigationLock ConfirmExternalNavigation="hasUnsavedChanges" />
             <EditForm Model="Input" FormName="PersonaAdd" OnValidSubmit="HandleOnValidSubmitAsync">
                 <DataAnnotationsValidator />
                 <ValidationSummary class="text-danger" role="alert" />
 
                 <div class="form-floating mb-3">
-                    <InputText @bind-Value="Input.Name" id="Input.Name" class="form-control" placeholder="Enter a name" />
+                    <InputText @bind-Value="Input.Name" @oninput="OnInputChanged" id="Input.Name" class="form-control" placeholder="Enter a name" />
                     <label for="Input.Name" class="form-label">Persona name</label>
                     <ValidationMessage For="() => Input.Name" class="text-danger" />
                 </div>
 
                 <div class="form-floating mb-3">
-                    <InputTextArea @bind-Value="Input.Notes" id="Input.Notes" class="form-control textarea-lrg" placeholder="Enter any notes for this persona" />
+                    <InputTextArea @bind-Value="Input.Notes" @oninput="OnInputChanged" id="Input.Notes" class="form-control textarea-lrg" placeholder="Enter any notes for this persona" />
                     <label for="Input.Notes" class="form-label">Notes</label>
                     <ValidationMessage For="() => Input.Notes" class="text-danger" />
                 </div>
                 <div class="d-flex justify-content-start gap-2">
                     <button type="submit" class="btn btn-primary" disabled="@IsWorking">Save</button>
-                    <a href="/personas" class="btn btn-outline-secondary" disabled="true">Cancel</a>
+                    <a href="/personas" class="btn btn-outline-secondary" >Cancel</a>
                     <button type="button" class="btn btn-outline-danger ms-auto" disabled="@IsWorking" @onclick="() => HandleDeletePersona()">Delete</button>
                 </div>
             </EditForm>
@@ -107,11 +108,6 @@ else
                 Notes = persona.Notes,
             };
     }
-    private void OnInputChange(ChangeEventArgs args)
-    {
-        hasUnsavedChanges = true;
-        StateHasChanged();
-    }
     private Persona? LoadPersona(Guid personaGuid)
     {
         return DbContext.Personas
@@ -181,5 +177,24 @@ else
 
         //TODO Probably need to add a max length here
         public string? Notes { get; set; }
+    }
+    private void OnInputChanged(ChangeEventArgs args)
+    {
+        hasUnsavedChanges = true;
+        StateHasChanged();
+    }
+
+    private async Task HandleOnBeforeInternalNavigation(LocationChangingContext context)
+    {
+        if (hasUnsavedChanges)
+        {
+            var shouldLeave = await JSRuntime.InvokeAsync<bool>("confirm",
+                "You have unsaved changes. Are you sure you want to leave this page?");
+
+            if (!shouldLeave)
+            {
+                context.PreventNavigation();
+            }
+        }
     }
 }
