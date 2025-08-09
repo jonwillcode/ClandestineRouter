@@ -2,6 +2,8 @@
 @using ClandestineRouter.Common.Models
 @using ClandestineRouter.Services
 @inject ApplicationDbContext DbContext
+@inject IJSRuntime JSRuntime
+@inject FeedbackService FeedbackService
 
 <PageTitle>@pageTitle</PageTitle>
 
@@ -32,11 +34,13 @@
                     <a class="btn btn-outline-primary btn-sm" href="@($"personas/edit?id={context.Id}")">
                         <i class="fas fa-edit"></i> Edit
                     </a>
+                    <button class="btn btn-outline-danger btn-sm" @onclick="() => HandleRemovePersona(context.Id)" >
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
                 </TemplateColumn>
         </QuickGrid>
     </div>
 </div>
-
 
 @code {
     private const string pageTitle = "Personas";
@@ -57,5 +61,18 @@
     private void LoadItems()
     {
         personas = DbContext.Personas.OrderBy(p => p.Name).AsQueryable();
+    }
+    private async Task HandleRemovePersona(Guid Id)
+    {
+        if (Id == Guid.Empty) return;
+        var persona = DbContext.Personas.Find(Id);
+        if (persona is null) return;
+        if (await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you would like to delete {persona.Name}?"))
+        {
+            DbContext.Personas.Remove(persona);
+            DbContext.SaveChanges();
+            LoadItems();
+            FeedbackService.ShowSuccess($"Successfully deleted persona '{persona.Name}'.");
+        }
     }
 }
