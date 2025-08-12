@@ -62,6 +62,10 @@
     private void LoadItems()
     {
         personas = DbContext.Personas.OrderBy(p => p.Name).AsQueryable();
+        foreach (var persona in personas)
+        {
+            persona.UpdatedDateTimeUtc = persona.UpdatedDateTimeUtc.ToLocalTime();
+        }
     }
     private async Task HandleRemovePersona(Guid Id)
     {

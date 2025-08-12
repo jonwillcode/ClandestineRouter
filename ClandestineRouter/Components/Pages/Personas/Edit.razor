@@ -184,7 +184,6 @@ else
         hasUnsavedChanges = true;
         StateHasChanged();
     }
-
     private async Task HandleOnBeforeInternalNavigation(LocationChangingContext context)
     {
         if (hasUnsavedChanges)
