@@ -2,14 +2,16 @@
 @using ClandestineRouter.Services
 @using Microsoft.AspNetCore.Components
 @inject FeedbackService FeedbackService
+@inject IJSRuntime JSRuntime
 @implements IDisposable
 @rendermode InteractiveServer
 
 <div class="feedback-alert-container">
-    @foreach (var message in FeedbackService.AlertMessages)
+    @foreach (var message in FeedbackService.Messages)
     {
         <div class="alert alert-@GetBootstrapClass(message.Type) feedback-alert fade-in"
-             role="alert">
+             role="alert"
+             id="alert-@message.Id">
             <div class="d-flex align-items-center">
                 <div class="feedback-alert-icon me-2">
                     @GetIcon(message.Type)
@@ -24,22 +26,50 @@
                         <div>@message.Message</div>
                     }
                 </div>
-                @* <button type="button" class="btn-close" @onclick="() => CloseAlert(message.Id)"></button> *@
+                <button type="button" class="btn-close" @onclick="() => CloseAlert(message.Id)" aria-label="Close"></button>
             </div>
         </div>
     }
 </div>
 
 @code {
+    private readonly Dictionary<Guid, bool> _displayedMessages = new();
+
     protected override void OnInitialized()
     {
-        Console.WriteLine("FeedbackAlert initialized.");
         FeedbackService.OnChange += StateHasChanged;
     }
 
-    private void CloseAlert(Guid id)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        FeedbackService.RemoveAlertMessage(id);
+        // Auto-dismiss messages after a delay and mark them as displayed
+        var messagesToProcess = FeedbackService.Messages
+            .Where(m => !_displayedMessages.ContainsKey(m.Id))
+            .ToList();
+
+        foreach (var message in messagesToProcess)
+        {
+            _displayedMessages[message.Id] = true;
+
+            // Auto-dismiss after delay (adjust timing as needed)
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(5000); // 5 seconds
+                await InvokeAsync(() => CloseAlert(message.Id));
+            });
+        }
+    }
+
+    private async Task CloseAlert(Guid messageId)
+    {
+        // Add fade-out animation before removing
+        await JSRuntime.InvokeVoidAsync("fadeOutAlert", $"alert-{messageId}");
+
+        // Remove from service and mark as handled
+        FeedbackService.RemoveMessage(messageId);
+        _displayedMessages.Remove(messageId);
+
+        StateHasChanged();
     }
 
     private string GetBootstrapClass(FeedbackType type) => type switch

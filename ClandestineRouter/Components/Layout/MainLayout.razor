@@ -1,20 +1,20 @@
 ﻿@using ClandestineRouter.Services
 @inherits LayoutComponentBase
 @inject BreadcrumbService BreadcrumbService
+@inject FeedbackService FeedbackService
+@inject NavigationManager Navigation
+@implements IDisposable
 
 <div class="page">
     <div class="sidebar">
         <NavMenu />
     </div>
-
     <main>
         <div class="top-row px-4">
             <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
         </div>
-
-
         <article class="content px-4">
-            <ClandestineRouter.Components.Shared.FeedbackAlert />
+            <FeedbackAlert />
             <ClandestineRouter.Components.Shared.Breadcrumb />
             @Body
         </article>
@@ -27,4 +27,44 @@
     <span class="dismiss">🗙</span>
 </div>
 
-<ClandestineRouter.Components.Shared.FeedbackToast />
+<script>
+    window.fadeOutAlert = (alertId) => {
+        const alertElement = document.getElementById(alertId);
+        if (alertElement) {
+            alertElement.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
+            alertElement.style.opacity = '0';
+            alertElement.style.transform = 'translateY(-20px)';
+
+            setTimeout(() => {
+                if (alertElement.parentNode) {
+                    alertElement.parentNode.removeChild(alertElement);
+                }
+            }, 300);
+        }
+    };
+</script>
+
+@code {
+    private string? _currentLocation;
+
+    protected override void OnInitialized()
+    {
+        _currentLocation = Navigation.Uri;
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        // Clear all feedback messages when navigating to a new page
+        if (_currentLocation != e.Location)
+        {
+            FeedbackService.ClearAllMessages();
+            _currentLocation = e.Location;
+        }
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+}

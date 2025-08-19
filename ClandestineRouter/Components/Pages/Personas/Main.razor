@@ -31,14 +31,14 @@
         <QuickGrid Items="personas" Class="table table-hover table-responsive">
             <PropertyColumn Property="p => p.Name" Title="Name" />
             <PropertyColumn Property="p => p.UpdatedDateTimeUtc" Title="Updated" Format="MM/dd/yyyy hh:mm tt" />
-                <TemplateColumn Title="Actions">
-                    <a class="btn btn-outline-primary btn-sm" href="@($"personas/edit?id={context.Id}")">
-                        <i class="fas fa-edit"></i> Edit
-                    </a>
-                    <button class="btn btn-outline-danger btn-sm" @onclick="() => HandleRemovePersona(context.Id)" >
-                        <i class="fas fa-trash"></i> Delete
-                    </button>
-                </TemplateColumn>
+            <TemplateColumn Title="Actions">
+                <a class="btn btn-outline-primary btn-sm" href="@($"personas/edit?id={context.Id}")">
+                    <i class="fas fa-edit"></i> Edit
+                </a>
+                <button class="btn btn-outline-danger btn-sm" @onclick="() => HandleRemovePersona(context.Id)">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            </TemplateColumn>
         </QuickGrid>
     </div>
 </div>
@@ -67,17 +67,34 @@
             persona.UpdatedDateTimeUtc = persona.UpdatedDateTimeUtc.ToLocalTime();
         }
     }
+
     private async Task HandleRemovePersona(Guid Id)
     {
         if (Id == Guid.Empty) return;
-        var persona = DbContext.Personas.Find(Id);
-        if (persona is null) return;
-        if (await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you would like to delete {persona.Name}?"))
+
+        try
         {
-            DbContext.Personas.Remove(persona);
-            DbContext.SaveChanges();
-            LoadItems();
-            FeedbackService.ShowSuccess($"Successfully deleted persona '{persona.Name}'.");
+            var persona = DbContext.Personas.Find(Id);
+            if (persona is null)
+            {
+                FeedbackService.ShowAlert(Common.Enums.FeedbackType.Error, "Persona not found.");
+                return;
+            }
+
+            if (await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you would like to delete '{persona.Name}'?"))
+            {
+                DbContext.Personas.Remove(persona);
+                await DbContext.SaveChangesAsync();
+                LoadItems();
+                StateHasChanged();
+
+                FeedbackService.ShowAlert(Common.Enums.FeedbackType.Success, $"Persona '{persona.Name}' was successfully deleted!");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"An error occurred while deleting the persona: {ex.Message}");
+            FeedbackService.ShowAlert(Common.Enums.FeedbackType.Error, "An error occurred while deleting the persona.");
         }
     }
 }

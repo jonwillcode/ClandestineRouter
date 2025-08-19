@@ -18,8 +18,5 @@ public class FeedbackMessage
     public string Title { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;
     public FeedbackType Type { get; set; } = FeedbackType.Info;
-    public int Duration { get; set; } = 5000;
-    public bool IsPersistent { get; set; } = false;
     public DateTime CreatedDateTimeUtc { get; set; } = DateTime.UtcNow;
-    public bool IsVisible { get; set; } = false;
 }

@@ -1,17 +1,17 @@
 ﻿@page "/personas/edit"
+@rendermode InteractiveServer
+
 @using ClandestineRouter.Common.Models
 @using ClandestineRouter.Services
 @using System.ComponentModel.DataAnnotations
+
 @inject ApplicationDbContext DbContext
 @inject BreadcrumbService BreadcrumbService
 @inject FeedbackService FeedbackService
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
-@rendermode InteractiveServer
 
 <PageTitle>@PageTitle</PageTitle>
-
-<NavigationLock ConfirmExternalNavigation="hasUnsavedChanges" OnBeforeInternalNavigation="HandleOnBeforeInternalNavigation" />
 
 @if (EditPersonaGuid is null || personaFound)
 {
@@ -35,8 +35,11 @@
                 </div>
                 <div class="d-flex justify-content-start gap-2">
                     <button type="submit" class="btn btn-primary" disabled="@IsWorking">Save</button>
-                    <a href="/personas" class="btn btn-outline-secondary" >Cancel</a>
-                    <button type="button" class="btn btn-outline-danger ms-auto" disabled="@IsWorking" @onclick="() => HandleDeletePersona()">Delete</button>
+                    <a href="/personas" class="btn btn-outline-secondary">Cancel</a>
+                    @if (EditPersonaGuid.HasValue)
+                    {
+                        <button type="button" class="btn btn-outline-danger ms-auto" disabled="@IsWorking" @onclick="() => HandleDeletePersona()">Delete</button>
+                    }
                 </div>
             </EditForm>
             @if (EditPersonaGuid.HasValue)
@@ -63,9 +66,7 @@ else
     private DateTime? updatedDateTimeUtc;
     private DateTime? createdDateTimeUtc;
     private bool IsWorking = false;
-    private bool hasUnsavedChanges = false; 
-    private bool personaFound = false; 
-    private bool createNewPersona = false; 
+    private bool personaFound = false;
 
     [SupplyParameterFromForm]
     private InputModel Input { get; set; } = new();
@@ -98,22 +99,25 @@ else
             new BreadcrumbItem { Text = PageTitle, Href = NavigationManager.Uri, Icon = "✏️" }
         );
     }
+
     private void SetComponentState(Persona persona)
     {
         personaFound = true;
         createdDateTimeUtc = persona.CreatedDateTimeUtc;
         updatedDateTimeUtc = persona.UpdatedDateTimeUtc;
         Input = new InputModel
-            {
-                Name = persona.Name,
-                Notes = persona.Notes,
-            };
+        {
+            Name = persona.Name,
+            Notes = persona.Notes,
+        };
     }
+
     private Persona? LoadPersona(Guid personaGuid)
     {
         return DbContext.Personas
             .FirstOrDefault(p => p.Id == personaGuid);
     }
+
     private async Task HandleOnValidSubmitAsync(EditContext args)
     {
         try
@@ -124,12 +128,13 @@ else
                 var existingPersona = await DbContext.Personas.FindAsync(EditPersonaGuid.Value);
                 if (existingPersona is null)
                 {
-                    FeedbackService.ShowError("Persona not found.", "Error");
+                    FeedbackService.ShowAlert(Common.Enums.FeedbackType.Error, "Persona not found.");
                     IsWorking = false;
                     return;
                 }
                 existingPersona.Name = Input.Name;
                 existingPersona.Notes = Input.Notes;
+                existingPersona.UpdatedDateTimeUtc = DateTime.UtcNow;
                 DbContext.Personas.Update(existingPersona);
             }
             else
@@ -142,59 +147,66 @@ else
                 await DbContext.Personas.AddAsync(newPersona);
             }
             await DbContext.SaveChangesAsync();
-            hasUnsavedChanges = false;
             var verb = EditPersonaGuid.HasValue ? "updated" : "added";
-            FeedbackService.ShowSuccess($"Persona {Input.Name} {verb} successfully!", "Success");
+            FeedbackService.ShowAlert(Common.Enums.FeedbackType.Success, $"Persona '{Input.Name}' was successfully {verb}!");
             NavigationManager.NavigateTo("/personas");
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            Console.WriteLine("An error occurred while saving the persona.");
-            FeedbackService.ShowError("An error occurred while saving the persona.", "Error");
+            Console.WriteLine($"An error occurred while saving the persona: {ex.Message}");
+            FeedbackService.ShowAlert(Common.Enums.FeedbackType.Error, "An error occurred while saving the persona.");
+        }
+        finally
+        {
+            IsWorking = false;
         }
     }
+
     private async Task HandleDeletePersona()
     {
-        if (EditPersonaGuid.HasValue)
+        if (!EditPersonaGuid.HasValue) return;
+
+        try
         {
+            IsWorking = true;
+            var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{Input.Name}'?");
+
+            if (!confirmed) return;
+
             var existingPersona = await DbContext.Personas.FindAsync(EditPersonaGuid.Value);
             if (existingPersona is not null)
             {
                 DbContext.Personas.Remove(existingPersona);
                 await DbContext.SaveChangesAsync();
-                FeedbackService.ShowSuccess($"Persona {existingPersona.Name} deleted successfully!", "Success");
+                FeedbackService.ShowAlert(Common.Enums.FeedbackType.Success, $"Persona '{existingPersona.Name}' was successfully deleted!");
             }
             else
             {
-                FeedbackService.ShowError("Persona not found.", "Error");
+                FeedbackService.ShowAlert(Common.Enums.FeedbackType.Error, "Persona not found.");
             }
+            NavigationManager.NavigateTo("/personas");
         }
-        NavigationManager.NavigateTo("/personas");
+        catch (Exception ex)
+        {
+            Console.WriteLine($"An error occurred while deleting the persona: {ex.Message}");
+            FeedbackService.ShowAlert(Common.Enums.FeedbackType.Error, "An error occurred while deleting the persona.");
+        }
+        finally
+        {
+            IsWorking = false;
+        }
     }
+
     private sealed class InputModel
     {
         [Required, MaxLength(256)]
         public string Name { get; set; } = string.Empty;
 
-        //TODO Probably need to add a max length here
         public string? Notes { get; set; }
     }
+
     private void OnInputChanged(ChangeEventArgs args)
     {
-        hasUnsavedChanges = true;
         StateHasChanged();
-    }
-    private async Task HandleOnBeforeInternalNavigation(LocationChangingContext context)
-    {
-        if (hasUnsavedChanges)
-        {
-            var shouldLeave = await JSRuntime.InvokeAsync<bool>("confirm",
-                "You have unsaved changes. Are you sure you want to leave this page?");
-
-            if (!shouldLeave)
-            {
-                context.PreventNavigation();
-            }
-        }
     }
 }
