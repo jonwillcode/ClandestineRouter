@@ -1,0 +1,203 @@
+﻿@page "/encounters/edit"
+@rendermode InteractiveServer
+
+@inject ApplicationDbContext DbContext
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.EntityFrameworkCore
+@using ClandestineRouter.Data.Validation.Attributes
+
+<PageTitle>@TitleVerb encounter</PageTitle>
+<h1>@TitleVerb encounter</h1>
+
+<div class="row">
+    <div class="col-lg-6">
+        <EditForm Model="Input" FormName="PersonaAdd" OnValidSubmit="HandleOnValidSubmitAsync">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert" />
+            <section class="mb-4">
+                <div class="form-floating mb-3">
+                    @* TODO Replace the input with better lookup UI *@
+                    <InputSelect @bind-Value="Input.PersonaId" class="form-select" id="Input.PersonaId" disabled="@IsWorking">
+                        <option value="">Select a persona</option>
+                        @foreach (var persona in Page.Personas)
+                        {
+                            <option value="@persona.Id">@persona.Name</option>
+                        }
+                    </InputSelect>
+                    <label for="Input.PersonaId" class="form-label" accesskey="0">Persona</label>
+                    <ValidationMessage For="() => Input.PersonaId" class="text-danger" />
+                </div>
+            </section>
+            <section class="mb-4">
+                <h3>Social media</h3>
+                <div class="form-floating mb-3">
+                    <InputSelect @bind-Value="Input.SocialMediaAppId" class="form-select" id="Input.SocialMediaAppId" disabled="@IsWorking">
+                        <option value="">Select an app</option>
+                        @foreach (var app in Page.SocialMediaApps)
+                        {
+                            <option value="@app.Id">@app.Name</option>
+                        }
+                    </InputSelect>
+                    <label for="Input.SocialMediaAppId" class="form-label">Social media app</label>
+                    <ValidationMessage For="() => Input.SocialMediaAppId" class="text-danger" />
+                </div>
+                @if (Input.SocialMediaAppId.HasValue)
+                {
+                    <div class="row">
+                        <div class="col col-md-9">
+                            <div class="form-floating mb-3">
+                                <InputText @bind-Value="Input.SocialMediaHandle" id="Input.SocialMediaHandle" class="form-control" placeholder="Enter the handle or username" disabled="@IsWorking" />
+                                <label for="Input.SocialMediaHandle" class="form-label">Handle/username</label>
+                                <ValidationMessage For="() => Input.SocialMediaHandle" class="text-danger" />
+                            </div>
+                        </div>
+                        <div class="col col-md-3">
+                            <div>
+                                <button type="button" @onclick="HandleGetSocialMediaAccountDataAsync" class="btn btn-sm btn-secondary">Get public data</button>
+                            </div>
+                            <div>
+                                <small class="text-muted">
+                                    @GetSocialMediaAccountDataStatus
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </section>
+
+            <section class="mb-4">
+                <h3>Encounter details</h3>
+                <div class="form-floating mb-3">
+                    <InputSelect @bind-Value="Input.BeginBehaviorTypeId" class="form-select" id="Input.BeginBehaviorTypeId" disabled="@IsWorking">
+                        <option value="">Select an app</option>
+                        @foreach (var app in Page.BehaviorTypes)
+                        {
+                            <option value="@app.Id">@app.Name</option>
+                        }
+                    </InputSelect>
+                    <label for="Input.BeginBehaviorTypeId" class="form-label">Begin behavior type</label>
+                    <ValidationMessage For="() => Input.BeginBehaviorTypeId" class="text-danger" />
+                </div>
+                <div class="form-floating mb-3">
+                    <InputSelect @bind-Value="Input.EndBehaviorTypeId" class="form-select" id="Input.EndBehaviorTypeId" disabled="@IsWorking">
+                        <option value="">Select an app</option>
+                        @foreach (var app in Page.BehaviorTypes)
+                        {
+                            <option value="@app.Id">@app.Name</option>
+                        }
+                    </InputSelect>
+                    <label for="Input.EndBehaviorTypeId" class="form-label">End behavior type</label>
+                    <ValidationMessage For="() => Input.EndBehaviorTypeId" class="text-danger" />
+                </div>
+                <div class="form-floating mb-3">
+                    <InputTextArea @bind-Value="Input.Notes" id="Input.Notes" class="form-control textarea-lrg" placeholder="Enter any notes for this encounter" />
+                    <label for="Input.Notes" class="form-label">Notes</label>
+                    <ValidationMessage For="() => Input.Notes" class="text-danger" />
+                </div>
+            </section>
+
+            <section class="mb-4">
+                <div class="d-flex justify-content-start gap-2">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <a href="/personas" class="btn btn-outline-secondary">Cancel</a>
+                    @* @if (EditPersonaGuid.HasValue)
+                    {
+                        <button type="button" class="btn btn-outline-danger ms-auto" disabled="@IsWorking" @onclick="() => HandleDeletePersona()">Delete</button>
+                    } *@
+                </div>
+            </section>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "id")]
+    public Guid? EncounterId { get; set; }
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    private PageModel Page { get; set; } = new();
+    private string TitleVerb = "Add";
+    private bool IsWorking = true;
+    private string GetSocialMediaAccountDataStatus = "Click button to get data";
+
+    protected override async Task OnInitializedAsync()
+    {
+        Page.Personas = await DbContext.Personas
+            .Select(p => new PersonaDto { Id = p.Id, Name = p.Name })
+            .ToListAsync();
+        Page.SocialMediaApps = await DbContext.SocialMediaApps
+            .Select(s => new SocialMediaAppDto { Id = s.Id, Name = s.Name })
+            .ToListAsync();
+        Page.BehaviorTypes = await DbContext.BehaviorTypes
+            .Select(b => new BehaviorTypeDto { Id = b.Id, Name = b.Name })
+            .ToListAsync();
+        IsWorking = false;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (EncounterId.HasValue)
+            TitleVerb = "Edit";
+    }
+
+    private void HandleOnValidSubmitAsync(EditContext args)
+    {
+        IsWorking = true;
+        var selectedPersonaId = Input.PersonaId;
+        Console.WriteLine($"Selected Persona ID: {selectedPersonaId}");
+        IsWorking = false;
+    }
+
+    private sealed class InputModel : IValidatableObject
+    {
+        public string? Notes { get; set; }
+
+        [Display(Name = "Persona")]
+        [Required]
+        public Guid? PersonaId { get; set; }
+
+        [Display(Name = "Social media app")]
+        public Guid? SocialMediaAppId { get; set; }
+
+        [Display(Name = "Social media handle/username")]
+        [MaxLength(128)]
+        [RequiredIf("SocialMediaAppId", ErrorMessage = "Social media handle/username is required when a social media app is set.")]
+        public string? SocialMediaHandle { get; set; }
+
+        [Display(Name = "Begin behavior type")]
+        public Guid? BeginBehaviorTypeId { get; set; }
+
+        [Display(Name = "End behavior type")]
+        public Guid? EndBehaviorTypeId { get; set; }
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            var results = new List<ValidationResult>();
+            if (!BeginBehaviorTypeId.HasValue && EndBehaviorTypeId.HasValue)
+            {
+                results.Add(new ValidationResult("Begin behavior type must be set if end behavior type is set.", new[] { nameof(EndBehaviorTypeId) }));
+            }
+            return results;
+        }
+    }
+
+    private sealed class PageModel
+    {
+        public List<PersonaDto> Personas { get; set; } = [];
+        public List<SocialMediaAppDto> SocialMediaApps { get; set; } = [];
+        public List<BehaviorTypeDto> BehaviorTypes { get; set; } = [];
+    }
+    private async Task HandleGetSocialMediaAccountDataAsync(MouseEventArgs args)
+    {
+        if (!IsWorking)
+        {
+            IsWorking = true;
+            GetSocialMediaAccountDataStatus = "Fetching data...";
+            await Task.Delay(2000); // Simulate a delay for fetching data
+            GetSocialMediaAccountDataStatus = "Done fetching data!";
+            IsWorking = false;
+        }
+    }
+}

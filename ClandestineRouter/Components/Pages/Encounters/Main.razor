@@ -1,0 +1,67 @@
+﻿@page "/encounters"
+
+<PageTitle>Encounters</PageTitle>
+
+<div class="row">
+    <div class="col mb-3">
+        <h1>Encounters</h1>
+    </div>
+</div>
+<div class="row mb-3">
+    <div class="col">
+        <!-- Mini summary dashboard -->
+        <div class="row d-flex justify-content-start gap-4">
+                @foreach(var item in encountersSummaryModel?.metricItems?.OrderBy(x => x.rank) ?? Enumerable.Empty<MetricItemModel>())
+                {
+                    <div class="card" style="width: 18rem;">
+                        <div class="card-body">
+                            <p class="card-text display-4">@item.value</p>
+                            <h5 class="card-title">@item.name</h5>
+                        </div>
+                    </div>
+                }
+        </div>
+    </div>
+</div>
+<div class="row mb-3">
+    <div class="col">
+        <h3>Recent encounters</h3>
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        <div class="d-flex justify-content-start gap-2">
+            <a href="/encounters/edit" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add encounter
+                </a>
+        </div>
+    </div>
+</div> 
+<div class="row">
+    <div class="col">
+        Quickgrid here
+    </div>
+</div>
+
+@code {
+    // static values for now, replace with real data later
+    private List<MetricItemModel> metricItems = new()
+    {
+        new MetricItemModel(10, "Today", 5),
+        new MetricItemModel(30, "This month", 100),
+        new MetricItemModel(40, "This year", 500),
+        new MetricItemModel(50, "Total", 1000)
+    };
+
+    private EncountersSummaryModel? encountersSummaryModel;
+
+    protected override void OnInitialized()
+    {
+        encountersSummaryModel = new EncountersSummaryModel(
+            metricItems
+        );
+    }
+
+    private sealed record EncountersSummaryModel(List<MetricItemModel>? metricItems);
+    private sealed record MetricItemModel(int rank, string name, int value);
+}
