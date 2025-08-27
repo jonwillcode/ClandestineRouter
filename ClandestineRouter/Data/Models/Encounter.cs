@@ -18,5 +18,7 @@ public class Encounter : BaseModel
 
     public IEnumerable<BehaviorType>? EndBehaviorType { get; set; }
 
+    public DateTime OccurrenceDateTimeUtc { get; set; }
+
     public string? Notes { get; set; }
 }

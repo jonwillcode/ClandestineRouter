@@ -46,6 +46,8 @@ builder.Services.AddScoped(typeof(ILookupRepository<>), typeof(LookupRepository<
 builder.Services.AddScoped<ILookupService, LookupService>();
 builder.Services.AddScoped<FeedbackService>();
 builder.Services.AddScoped<BreadcrumbService>();
+builder.Services.AddScoped<ITimeZoneService, TimeZoneService>();
+builder.Services.AddScoped<UserDataService>();
 
 // Register specific lookup repositories (optional, for direct injection)
 //builder.Services.AddScoped<ILookupRepository<BehaviorType>, LookupRepository<BehaviorType>>();

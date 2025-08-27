@@ -3,6 +3,7 @@ using System.Globalization;
 using TimeZoneConverter;
 
 namespace ClandestineRouter.Services;
+
 public interface ITimeZoneService
 {
     /// <summary>
@@ -87,10 +88,18 @@ public interface ITimeZoneService
 
 public class TimeZoneService : ITimeZoneService
 {
+    private readonly ILogger<TimeZoneService>? _logger;
+
+    public TimeZoneService(ILogger<TimeZoneService>? logger = null)
+    {
+        _logger = logger;
+    }
+
     public DateTime ConvertFromUtc(DateTime utcDateTime, string ianaTimeZoneId)
     {
         if (string.IsNullOrWhiteSpace(ianaTimeZoneId))
         {
+            _logger?.LogWarning("No timezone specified, returning UTC time");
             return utcDateTime; // Return UTC if no timezone specified
         }
 
@@ -103,26 +112,32 @@ public class TimeZoneService : ITimeZoneService
             // Ensure the input is treated as UTC
             var utcTime = DateTime.SpecifyKind(utcDateTime, DateTimeKind.Utc);
 
-            return TimeZoneInfo.ConvertTimeFromUtc(utcTime, targetTimeZone);
+            var convertedTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime, targetTimeZone);
+
+            // For form display purposes, return as Unspecified to avoid browser timezone conflicts
+            return DateTime.SpecifyKind(convertedTime, DateTimeKind.Unspecified);
         }
-        catch (TimeZoneNotFoundException)
+        catch (TimeZoneNotFoundException ex)
         {
+            _logger?.LogWarning(ex, "TimeZone not found: {TimeZoneId}, trying fallback", ianaTimeZoneId);
+
             // Fallback: try direct lookup in case it's already a Windows ID
             try
             {
                 var fallbackTimeZone = TimeZoneInfo.FindSystemTimeZoneById(ianaTimeZoneId);
                 var utcTime = DateTime.SpecifyKind(utcDateTime, DateTimeKind.Utc);
-                return TimeZoneInfo.ConvertTimeFromUtc(utcTime, fallbackTimeZone);
+                var convertedTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime, fallbackTimeZone);
+                return DateTime.SpecifyKind(convertedTime, DateTimeKind.Unspecified);
             }
-            catch
+            catch (Exception fallbackEx)
             {
-                // If all else fails, return UTC
+                _logger?.LogError(fallbackEx, "Fallback timezone conversion failed for: {TimeZoneId}", ianaTimeZoneId);
                 return utcDateTime;
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Return UTC if conversion fails
+            _logger?.LogError(ex, "Timezone conversion failed for: {TimeZoneId}", ianaTimeZoneId);
             return utcDateTime;
         }
     }
@@ -136,11 +151,11 @@ public class TimeZoneService : ITimeZoneService
 
         try
         {
-            // Try multiple parsing strategies for flexibility
             DateTime result;
 
-            // First try: ISO 8601 format (most common for APIs)
-            if (DateTime.TryParse(utcDateTimeString, null, DateTimeStyles.RoundtripKind | DateTimeStyles.AdjustToUniversal, out result))
+            // First try: ISO 8601 format with proper timezone handling
+            if (DateTime.TryParse(utcDateTimeString, null,
+                DateTimeStyles.RoundtripKind | DateTimeStyles.AdjustToUniversal, out result))
             {
                 return DateTime.SpecifyKind(result, DateTimeKind.Utc);
             }
@@ -155,8 +170,10 @@ public class TimeZoneService : ITimeZoneService
             string[] formats = {
                 "yyyy-MM-ddTHH:mm:ssZ",           // ISO 8601 with Z
                 "yyyy-MM-ddTHH:mm:ss.fffZ",       // ISO 8601 with milliseconds and Z
+                "yyyy-MM-ddTHH:mm:ss.fffffffZ",   // ISO 8601 with ticks and Z
                 "yyyy-MM-ddTHH:mm:ss",            // ISO 8601 without Z
                 "yyyy-MM-ddTHH:mm:ss.fff",        // ISO 8601 with milliseconds, no Z
+                "yyyy-MM-ddTHH:mm:ss.fffffff",    // ISO 8601 with ticks, no Z
                 "yyyy-MM-dd HH:mm:ss",            // Standard format with space
                 "MM/dd/yyyy HH:mm:ss",            // US format
                 "dd/MM/yyyy HH:mm:ss",            // European format
@@ -165,15 +182,18 @@ public class TimeZoneService : ITimeZoneService
                 "dd/MM/yyyy"                      // European date only
             };
 
-            if (DateTime.TryParseExact(utcDateTimeString, formats, null, DateTimeStyles.None, out result))
+            if (DateTime.TryParseExact(utcDateTimeString, formats, null,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out result))
             {
                 return DateTime.SpecifyKind(result, DateTimeKind.Utc);
             }
 
+            _logger?.LogWarning("Failed to parse datetime string: {DateTimeString}", utcDateTimeString);
             return null;
         }
-        catch
+        catch (Exception ex)
         {
+            _logger?.LogError(ex, "Exception parsing datetime string: {DateTimeString}", utcDateTimeString);
             return null;
         }
     }
@@ -193,6 +213,7 @@ public class TimeZoneService : ITimeZoneService
     {
         if (user?.LocalTimeZone == null)
         {
+            _logger?.LogDebug("User has no timezone set, returning UTC time");
             return utcDateTime; // Return UTC if user has no timezone
         }
 
@@ -203,6 +224,7 @@ public class TimeZoneService : ITimeZoneService
     {
         if (user?.LocalTimeZone == null)
         {
+            _logger?.LogDebug("User has no timezone set, parsing as UTC");
             return ParseUtcString(utcDateTimeString); // Return parsed UTC if user has no timezone
         }
 
@@ -211,6 +233,12 @@ public class TimeZoneService : ITimeZoneService
 
     public DateTime ConvertBetweenTimeZones(DateTime dateTime, string fromIanaTimeZoneId, string toIanaTimeZoneId)
     {
+        if (string.IsNullOrWhiteSpace(fromIanaTimeZoneId) || string.IsNullOrWhiteSpace(toIanaTimeZoneId))
+        {
+            _logger?.LogWarning("Missing timezone parameters for conversion");
+            return dateTime;
+        }
+
         try
         {
             // Convert source to Windows timezone
@@ -221,30 +249,48 @@ public class TimeZoneService : ITimeZoneService
             var toWindowsId = TZConvert.IanaToWindows(toIanaTimeZoneId);
             var toTimeZone = TimeZoneInfo.FindSystemTimeZoneById(toWindowsId);
 
+            // Specify the kind of the input datetime
+            var sourceDateTime = DateTime.SpecifyKind(dateTime, DateTimeKind.Unspecified);
+
             // First convert to UTC, then to target timezone
-            var utcDateTime = TimeZoneInfo.ConvertTimeToUtc(dateTime, fromTimeZone);
-            return TimeZoneInfo.ConvertTimeFromUtc(utcDateTime, toTimeZone);
+            var utcDateTime = TimeZoneInfo.ConvertTimeToUtc(sourceDateTime, fromTimeZone);
+            var convertedTime = TimeZoneInfo.ConvertTimeFromUtc(utcDateTime, toTimeZone);
+
+            return DateTime.SpecifyKind(convertedTime, DateTimeKind.Unspecified);
         }
-        catch
+        catch (Exception ex)
         {
-            // If conversion fails, return original datetime
+            _logger?.LogError(ex, "Timezone conversion failed from {FromZone} to {ToZone}",
+                fromIanaTimeZoneId, toIanaTimeZoneId);
             return dateTime;
         }
     }
 
     public DateTime? ConvertBetweenTimeZones(string dateTimeString, string fromIanaTimeZoneId, string toIanaTimeZoneId)
     {
-        var parsedDateTime = ParseUtcString(dateTimeString);
-        if (!parsedDateTime.HasValue)
+        // For string conversion, assume it's in the source timezone (not UTC)
+        if (string.IsNullOrWhiteSpace(dateTimeString))
         {
             return null;
         }
 
-        return ConvertBetweenTimeZones(parsedDateTime.Value, fromIanaTimeZoneId, toIanaTimeZoneId);
+        DateTime parsedDateTime;
+        if (!DateTime.TryParse(dateTimeString, out parsedDateTime))
+        {
+            _logger?.LogWarning("Failed to parse datetime string for timezone conversion: {DateTimeString}", dateTimeString);
+            return null;
+        }
+
+        return ConvertBetweenTimeZones(parsedDateTime, fromIanaTimeZoneId, toIanaTimeZoneId);
     }
 
     public TimeSpan GetTimeZoneOffset(string ianaTimeZoneId, DateTime dateTime)
     {
+        if (string.IsNullOrWhiteSpace(ianaTimeZoneId))
+        {
+            return TimeSpan.Zero;
+        }
+
         try
         {
             var windowsTimeZoneId = TZConvert.IanaToWindows(ianaTimeZoneId);
@@ -253,8 +299,9 @@ public class TimeZoneService : ITimeZoneService
             // Get offset for the specific date (accounts for DST)
             return timeZone.GetUtcOffset(dateTime);
         }
-        catch
+        catch (Exception ex)
         {
+            _logger?.LogError(ex, "Failed to get timezone offset for: {TimeZoneId}", ianaTimeZoneId);
             return TimeSpan.Zero; // Return UTC offset if lookup fails
         }
     }
@@ -289,14 +336,20 @@ public class TimeZoneService : ITimeZoneService
 
     public string GetTimeZoneDisplayName(string ianaTimeZoneId)
     {
+        if (string.IsNullOrWhiteSpace(ianaTimeZoneId))
+        {
+            return "UTC";
+        }
+
         try
         {
             var windowsTimeZoneId = TZConvert.IanaToWindows(ianaTimeZoneId);
             var timeZone = TimeZoneInfo.FindSystemTimeZoneById(windowsTimeZoneId);
             return timeZone.DisplayName;
         }
-        catch
+        catch (Exception ex)
         {
+            _logger?.LogWarning(ex, "Failed to get display name for timezone: {TimeZoneId}", ianaTimeZoneId);
             return ianaTimeZoneId; // Return the ID itself if display name can't be found
         }
     }
