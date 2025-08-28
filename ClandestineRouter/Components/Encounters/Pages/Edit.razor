@@ -119,28 +119,25 @@
                         <label for="Input.SocialMediaAppId" class="form-label">Social media app</label>
                         <ValidationMessage For="() => Input.SocialMediaAppId" class="text-danger" />
                     </div>
-                    @if (Input.SocialMediaAppId.HasValue)
-                    {
-                        <div class="row">
-                            <div class="col col-md-9">
-                                <div class="form-floating mb-3">
-                                    <InputText @bind-Value="Input.SocialMediaHandle" id="Input.SocialMediaHandle" class="form-control" placeholder="Enter the handle or username" disabled="@IsWorking" />
-                                    <label for="Input.SocialMediaHandle" class="form-label">Handle/username</label>
-                                    <ValidationMessage For="() => Input.SocialMediaHandle" class="text-danger" />
-                                </div>
-                            </div>
-                            <div class="col col-md-3">
-                                <div>
-                                    <button type="button" @onclick="HandleGetSocialMediaAccountDataAsync" class="btn btn-sm btn-secondary">Get public data</button>
-                                </div>
-                                <div>
-                                    <small class="text-muted">
-                                        @GetSocialMediaAccountDataStatus
-                                    </small>
-                                </div>
+                    <div class="row">
+                        <div class="col col-md-9">
+                            <div class="form-floating mb-3">
+                                <InputText @bind-Value="Input.SocialMediaHandle" id="Input.SocialMediaHandle" class="form-control" placeholder="Enter the handle or username" disabled="@IsWorking" />
+                                <label for="Input.SocialMediaHandle" class="form-label">Handle/username</label>
+                                <ValidationMessage For="() => Input.SocialMediaHandle" class="text-danger" />
                             </div>
                         </div>
-                    }
+                        <div class="col col-md-3">
+                            <div>
+                                <button type="button" @onclick="HandleGetSocialMediaAccountDataAsync" class="btn btn-sm btn-secondary">Get public data</button>
+                            </div>
+                            <div>
+                                <small class="text-muted">
+                                    @GetSocialMediaAccountDataStatus
+                                </small>
+                            </div>
+                        </div>
+                    </div>
                 </section>
 
                 <section class="mb-4">
@@ -235,7 +232,7 @@
             var utcNow = DateTime.UtcNow;
             var userTime = utcNow.ToUserTime(TimeZoneService, user);
             _OccurrenceDateTime = DateTime.SpecifyKind(userTime, DateTimeKind.Unspecified);
-            Input.OccurrenceDateTimeLocal = _OccurrenceDateTime;
+            Input.OccurrenceDateTimeLocal = _OccurrenceDateTime.Value;
         }
         else
         {
@@ -281,16 +278,16 @@
     {
         IsWorking = true;
 
-        try
-        {
-            // first just save new ones, then add updating later
-            var newEncounter = new Encounter
-            {
-                OccurrenceDateTimeUtc = Input.OccurrenceDateTimeLocal, 
-                EncounterTypeId = Input.EncounterTypeId,
-                
-            }
-        }
+        // try
+        // {
+        //     //first just save new ones, then add updating later
+        //     var newEncounter = new Encounter
+        //         {
+        //             OccurrenceDateTimeUtc = Input.OccurrenceDateTimeLocal,
+        //             EncounterTypeId = Input.EncounterTypeId
+
+        //         };
+        // }
 
         IsWorking = false;
     }
