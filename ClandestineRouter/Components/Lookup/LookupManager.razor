@@ -1,5 +1,5 @@
 ﻿@using ClandestineRouter.Data.Repositories
-@typeparam TLookup where TLookup : class, IBaseLookupModel, new()
+@typeparam TLookup where TLookup : class, ILookupEntity, new()
 @inject ILookupRepository<TLookup> Repository
 @inject IJSRuntime JSRuntime
 

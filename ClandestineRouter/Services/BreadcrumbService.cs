@@ -1,5 +1,4 @@
-﻿using ClandestineRouter.Common.Models;
-using Microsoft.AspNetCore.Components;
+﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
 
 namespace ClandestineRouter.Services;
@@ -88,4 +87,12 @@ public class BreadcrumbService : IDisposable
                      .Select(word => char.ToUpper(word[0]) + word[1..].ToLower())
                      .Aggregate((a, b) => a + " " + b);
     }
+}
+
+public class BreadcrumbItem
+{
+    public string Text { get; set; } = string.Empty;
+    public string? Href { get; set; }
+    public bool IsActive { get; set; }
+    public string? Icon { get; set; }
 }

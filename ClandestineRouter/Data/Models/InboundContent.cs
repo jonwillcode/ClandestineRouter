@@ -2,7 +2,7 @@
 
 namespace ClandestineRouter.Data.Models;
 
-public class InboundContent : BaseModel
+public class InboundContent : CommonEntityBase
 {
     public Guid PersonaId { get; set; }
     

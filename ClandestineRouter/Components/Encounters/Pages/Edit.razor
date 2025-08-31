@@ -264,7 +264,7 @@
             .Select(p => new PersonaDto { Id = p.Id, Name = p.Name })
             .ToListAsync();
         Page.SocialMediaApps = await DbContext.SocialMediaApps
-            .Select(s => new SocialMediaAppDto { Id = s.Id, Name = s.Name })
+            .Select(s => new SocialMediaAppDto { Id = s.Id, Name = s.Name})
             .ToListAsync();
         Page.BehaviorTypes = await DbContext.BehaviorTypes
             .Select(b => new BehaviorTypeDto { Id = b.Id, Name = b.Name })

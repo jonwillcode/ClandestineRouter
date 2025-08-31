@@ -2,7 +2,7 @@
 
 namespace ClandestineRouter.Data.Models;
 
-public class Encounter : BaseModel
+public class Encounter : CommonEntityBase
 {
     [Required]
     public required Guid SocialMediaAccountId { get; set; }

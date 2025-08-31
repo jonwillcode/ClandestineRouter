@@ -2,6 +2,6 @@
 
 namespace ClandestineRouter.Data.Models;
 
-public class SocialMediaApp : BaseLookupModel
+public class SocialMediaApp : LookupEntityBase
 {
 }

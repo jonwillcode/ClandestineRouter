@@ -1,18 +1,18 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿//using System.ComponentModel.DataAnnotations;
 
-namespace ClandestineRouter.Data.Models;
+//namespace ClandestineRouter.Data.Models;
 
-public interface IBaseLookupModel : IBaseModel
-{
-    bool IsActive { get; set; }
+//public interface IBaseLookupModel : IBaseModel
+//{
+//    bool IsActive { get; set; }
 
-    string Name { get; set; } 
-}
+//    string Name { get; set; } 
+//}
 
-public abstract class BaseLookupModel : BaseModel, IBaseLookupModel
-{
-    [Required]
-    public string Name { get; set; } = string.Empty;
+//public abstract class BaseLookupModel : BaseModel, IBaseLookupModel
+//{
+//    [Required]
+//    public string Name { get; set; } = string.Empty;
 
-    public bool IsActive { get; set; }
-}
+//    public bool IsActive { get; set; }
+//}

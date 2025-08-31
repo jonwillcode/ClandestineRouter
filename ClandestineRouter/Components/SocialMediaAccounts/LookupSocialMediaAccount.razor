@@ -1,5 +1,127 @@
-﻿<h3>LookupSocialMediaAccount</h3>
+﻿@using ClandestineRouter.Services;
+
+@rendermode InteractiveServer
+
+@inject IDataService<SocialMediaAccount> SocialMediaAccountDataService
+@inject IDataService<SocialMediaApp> SocialMediaAppDataService
+
+<div class="row gap-5">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                Lookup Social Media Account
+            </div>
+            <div class="card-body">
+                <EditForm Model="Input" OnValidSubmit="HandleOnValidSubmitAsync" FormName="LookupSocialMediaAccount">
+                    <div class="row">
+                        <div class="col col-md-4">
+                            <div class="form-floating mb-3">
+                                <InputText type="text" class="form-control" id="Input.Username" @bind-Value="Input.Username" />
+                                <label for="Input.Username" class="form-label">Username</label>
+                            </div>
+                        </div>
+                        <div class="col col-md-4">
+                            <div class="form-floating mb-3">
+                                <InputText class="form-control" id="Input.DisplayName" @bind-Value="Input.DisplayName" />
+                                <label for="Input.DisplayName" class="form-label">Display name</label>
+                            </div>
+                        </div>
+                        <div class="col col-md-4">
+                            <div class="form-floating mb-3">
+                                <InputSelect class="form-select" id="Input.SocialMediaAppId" @bind-Value="Input.SocialMediaAppId">
+                                    <option></option>
+                                    @foreach(var app in SocialMediaApps)
+                                    {
+                                        <option value="@app.Id">@app.Name</option>
+                                    }
+                                </InputSelect>
+                                <label for="Input.SocialMediaAppId" class="form-label">Social media app</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    
+                    <div>
+                        <button type="submit" class="btn btn-primary">Search</button>
+                    </div>
+                </EditForm>
+                @if (Results is not null)
+                {
+                    <div class="mt-4">
+                        <QuickGrid Items="Results" Class="table table-hover table-responsive">
+                            <PropertyColumn Property="p => p.Username" Title="Username" />
+                            <PropertyColumn Property="p => p.DisplayName" Title="Display name" />
+                        </QuickGrid>
+                    </div>
+                }
+                else
+                {
+                    <div>
+                        <p class="text-muted">@quickGridFeedback</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
 
 @code {
+    private InputModel Input { get; set; } = new();
+    private IQueryable<LookupResult>? Results;
+    private string? quickGridFeedback;
+    private bool DisplayGrid = false;
+    private List<SocialMediaApp> SocialMediaApps = [];
 
+    protected override async Task OnInitializedAsync()
+    {
+        SocialMediaApps = (await SocialMediaAppDataService.GetAllAsync()).Data?.ToList() ?? [];
+    }
+
+    private async Task HandleOnValidSubmitAsync(EditContext args)
+    {
+        quickGridFeedback = null;
+        SocialMediaApps = (await SocialMediaAppDataService.GetAllAsync()).Data?.ToList() ?? [];
+        if (!string.IsNullOrWhiteSpace(Input.Username) || 
+            !string.IsNullOrWhiteSpace(Input.DisplayName))
+        {
+            DisplayGrid = true;
+            var result = await SocialMediaAccountDataService.GetAllAsync();
+            if (result.IsSuccess)
+            {
+                Results = result.Data?.Select(account => new LookupResult
+                {
+                    DisplayName = account.DisplayName ?? string.Empty,
+                    Username = account.Username,
+                    UpdatedDateTime = account.UpdatedDateTimeUtc
+                })
+                .AsQueryable();
+            }
+            return;
+        }
+
+        quickGridFeedback = "Enter search criteria.";
+    }
+
+    private sealed class LookupResult()
+    {
+        public string Username { get; set; } = string.Empty;
+        public string DisplayName { get; set; } = string.Empty;
+        public DateTime UpdatedDateTime { get; set; }
+    }
+
+    private sealed class InputModel() //: IValidatableObject
+    {
+        [MaxLength(256)]
+        public string? Username { get; set; }
+
+        [MaxLength(256)]
+        public string? DisplayName { get; set; }
+
+        public Guid? SocialMediaAppId { get; set; }
+
+        // public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        // {
+        //     throw new NotImplementedException();
+        // }
+    }
 }

@@ -66,7 +66,7 @@ namespace ClandestineRouter.Data
                 .IsUnique();
         }
 
-        private static void ConfigureLookupEntity<T>(ModelBuilder builder) where T : BaseLookupModel
+        private static void ConfigureLookupEntity<T>(ModelBuilder builder) where T : LookupEntityBase
         {
             builder.Entity<T>(entity =>
             {

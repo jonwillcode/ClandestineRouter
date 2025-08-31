@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ClandestineRouter.Data.Repositories;
 
-public interface ILookupRepository<T> where T : class, IBaseLookupModel
+public interface ILookupRepository<T> where T : class, ILookupEntity
 {
     Task<List<T>> GetAllActiveAsync();
     Task<List<T>> GetAllAsync();
@@ -12,7 +12,7 @@ public interface ILookupRepository<T> where T : class, IBaseLookupModel
     Task<T> UpdateAsync(T entity);
     Task DeleteAsync(Guid id);
 }
-public class LookupRepository<T>(ApplicationDbContext context) : ILookupRepository<T> where T : class, IBaseLookupModel
+public class LookupRepository<T>(ApplicationDbContext context) : ILookupRepository<T> where T : class, ILookupEntity
 {
     private readonly ApplicationDbContext _dbContext = context;
     private readonly DbSet<T> _dbSet = context.Set<T>();

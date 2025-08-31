@@ -1,7 +1,7 @@
 using ClandestineRouter.Components;
 using ClandestineRouter.Components.Account;
 using ClandestineRouter.Data;
-using ClandestineRouter.Data.Models;
+using ClandestineRouter.Common.Extensions;
 using ClandestineRouter.Data.Repositories;
 using ClandestineRouter.Services;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -51,6 +51,9 @@ builder.Services.AddScoped<UserDataService>();
 
 // Register specific lookup repositories (optional, for direct injection)
 //builder.Services.AddScoped<ILookupRepository<BehaviorType>, LookupRepository<BehaviorType>>();
+
+// Auto-registers for all models that implement IEntity
+builder.Services.AddDataServiceStack();
 
 var app = builder.Build();
 

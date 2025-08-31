@@ -2,7 +2,7 @@
 
 namespace ClandestineRouter.Data.Models;
 
-public class EncounterType : BaseLookupModel
+public class EncounterType : LookupEntityBase
 {
     [MaxLength(2000)]
     public string? Description { get; set; }

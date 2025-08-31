@@ -2,7 +2,7 @@
 
 namespace ClandestineRouter.Data.Models;
 
-public class BehaviorType : BaseLookupModel
+public class BehaviorType : LookupEntityBase
 {
     public IEnumerable<Encounter>? EncountersBegin { get; set; }
 
