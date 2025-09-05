@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ClandestineRouter.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250803210503_PersonasNameRequired")]
-    partial class PersonasNameRequired
+    [Migration("20250901231707_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -131,11 +131,17 @@ namespace ClandestineRouter.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("CreatedDateTimeUtc")
                         .HasColumnType("datetime2");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
+
+                    b.Property<Guid>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -159,14 +165,26 @@ namespace ClandestineRouter.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("CreatedDateTimeUtc")
                         .HasColumnType("datetime2");
 
                     b.Property<Guid>("EncounterTypeId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Notes")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("OccurrenceDateTimeUtc")
+                        .HasColumnType("datetime2");
 
                     b.Property<Guid>("SocialMediaAccountId")
                         .HasColumnType("uniqueidentifier");
@@ -189,6 +207,9 @@ namespace ClandestineRouter.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("CreatedDateTimeUtc")
                         .HasColumnType("datetime2");
 
@@ -198,6 +219,9 @@ namespace ClandestineRouter.Migrations
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
+
+                    b.Property<Guid>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -225,6 +249,9 @@ namespace ClandestineRouter.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
+                    b.Property<Guid>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("CreatedDateTimeUtc")
                         .HasColumnType("datetime2");
 
@@ -232,8 +259,14 @@ namespace ClandestineRouter.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsProcessed")
                         .HasColumnType("bit");
+
+                    b.Property<Guid>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Notes")
                         .HasColumnType("nvarchar(max)");
@@ -257,8 +290,17 @@ namespace ClandestineRouter.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("CreatedDateTimeUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -284,10 +326,19 @@ namespace ClandestineRouter.Migrations
                     b.Property<Guid>("AssociatePersonaId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("CreatedDateTimeUtc")
                         .HasColumnType("datetime2");
 
                     b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("ModifiedById")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("UpdatedDateTimeUtc")
@@ -316,12 +367,21 @@ namespace ClandestineRouter.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
 
+                    b.Property<Guid>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("CreatedDateTimeUtc")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("DisplayName")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Notes")
                         .HasColumnType("nvarchar(max)");
@@ -353,13 +413,22 @@ namespace ClandestineRouter.Migrations
                     b.Property<Guid>("AccountId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("CreatedDateTimeUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Link")
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
+
+                    b.Property<Guid>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("SocialMediaAccountId")
                         .HasColumnType("uniqueidentifier");
@@ -380,11 +449,17 @@ namespace ClandestineRouter.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("CreatedDateTimeUtc")
                         .HasColumnType("datetime2");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
+
+                    b.Property<Guid>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()

@@ -59,6 +59,8 @@ namespace ClandestineRouter.Migrations
                     CreatedDateTimeUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedDateTimeUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
+                    CreatedById = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ModifiedById = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
@@ -75,6 +77,8 @@ namespace ClandestineRouter.Migrations
                     CreatedDateTimeUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedDateTimeUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
+                    CreatedById = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ModifiedById = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
@@ -87,10 +91,13 @@ namespace ClandestineRouter.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    Name = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
                     Notes = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     CreatedDateTimeUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedDateTimeUtc = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    UpdatedDateTimeUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedById = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ModifiedById = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -105,6 +112,8 @@ namespace ClandestineRouter.Migrations
                     CreatedDateTimeUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedDateTimeUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
+                    CreatedById = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ModifiedById = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
@@ -229,7 +238,10 @@ namespace ClandestineRouter.Migrations
                     IsProcessed = table.Column<bool>(type: "bit", nullable: false),
                     Notes = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     CreatedDateTimeUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedDateTimeUtc = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    UpdatedDateTimeUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedById = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ModifiedById = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -250,7 +262,10 @@ namespace ClandestineRouter.Migrations
                     AssociatePersonaId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     CreatedDateTimeUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedDateTimeUtc = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    UpdatedDateTimeUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedById = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ModifiedById = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -279,7 +294,10 @@ namespace ClandestineRouter.Migrations
                     Bio = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
                     Notes = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     CreatedDateTimeUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedDateTimeUtc = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    UpdatedDateTimeUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedById = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ModifiedById = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -299,9 +317,13 @@ namespace ClandestineRouter.Migrations
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     SocialMediaAccountId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     EncounterTypeId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OccurrenceDateTimeUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
                     Notes = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     CreatedDateTimeUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedDateTimeUtc = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    UpdatedDateTimeUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedById = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ModifiedById = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -329,7 +351,10 @@ namespace ClandestineRouter.Migrations
                     SocialMediaAccountId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Link = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
                     CreatedDateTimeUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedDateTimeUtc = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    UpdatedDateTimeUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedById = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ModifiedById = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {

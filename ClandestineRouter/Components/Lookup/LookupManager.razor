@@ -1,7 +1,12 @@
-﻿@using ClandestineRouter.Data.Repositories
+﻿@using ClandestineRouter.Services
+@using ClandestineRouter.Data.Models
+@using System.Security.Claims
 @typeparam TLookup where TLookup : class, ILookupEntity, new()
-@inject ILookupRepository<TLookup> Repository
+@inject IDataService<TLookup> DataService
+@inject FeedbackService FeedbackService
 @inject IJSRuntime JSRuntime
+@* This must be declared as a property on component when called *@
+@* @rendermode InteractiveServer *@
 
 <div class="row">
     <div class="col">
@@ -12,12 +17,24 @@
         </div>
     </div>
 </div>
+
 <div class="row">
     <div class="col">
-        @if (items == null)
+        @if (isLoading)
         {
             <div class="text-center">
-                <div class="spinner-border" role="status"></div>
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger" role="alert">
+                <strong>Error:</strong> @errorMessage
+                <button type="button" class="btn btn-sm btn-outline-secondary ms-2" @onclick="LoadItems">
+                    <i class="fas fa-redo"></i> Retry
+                </button>
             </div>
         }
         else if (filteredItems is null || !filteredItems.Any())
@@ -54,26 +71,38 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">@(editingItem.Id == Guid.Empty ? "Add" : "Edit") @editingItem.Name.ToLower() </h5>
+                    <h5 class="modal-title">@(editingItem.Id == Guid.Empty ? "Add" : "Edit") @GetEntityDisplayName()</h5>
                     <button type="button" class="btn-close" @onclick="HideModal"></button>
                 </div>
                 <div class="modal-body">
                     <EditForm Model="editingItem" OnValidSubmit="SaveItem">
                         <DataAnnotationsValidator />
+                        <ValidationSummary class="alert alert-danger" />
+
                         <div class="mb-3">
                             <label class="form-label">Name</label>
                             <InputText @bind-Value="editingItem.Name" class="form-control" />
                             <ValidationMessage For="() => editingItem.Name" />
                         </div>
+
                         <div class="mb-3">
                             <div class="form-check">
                                 <InputCheckbox @bind-Value="editingItem.IsActive" class="form-check-input" />
                                 <label class="form-check-label">Active</label>
                             </div>
                         </div>
+
                         <div class="d-flex justify-content-end">
-                            <button type="button" class="btn btn-secondary me-2" @onclick="HideModal">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Save</button>
+                            <button type="button" class="btn btn-secondary me-2" @onclick="HideModal" disabled="@isSaving">
+                                Cancel
+                            </button>
+                            <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                                @if (isSaving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                Save
+                            </button>
                         </div>
                     </EditForm>
                 </div>
@@ -86,7 +115,13 @@
     private List<TLookup>? items;
     private IQueryable<TLookup>? filteredItems;
     private bool showModal = false;
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private string? errorMessage;
     private TLookup editingItem = new();
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -95,9 +130,51 @@
 
     private async Task LoadItems()
     {
-        await Task.Delay(1000);
-        items = await Repository.GetAllAsync();
-        filteredItems = items.AsQueryable();
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+
+            // Get current user for security
+            ClaimsPrincipal? user = null;
+            if (AuthenticationStateTask != null)
+            {
+                var authState = await AuthenticationStateTask;
+                user = authState.User;
+            }
+
+            var result = await DataService.GetAllAsync(user);
+
+            if (result.IsSuccess && result.Data != null)
+            {
+                items = result.Data.ToList();
+                filteredItems = items.AsQueryable();
+                errorMessage = null;
+            }
+            else
+            {
+                items = new List<TLookup>();
+                filteredItems = items.AsQueryable();
+                errorMessage = result.ErrorMessage ?? "Unknown error occurred";
+
+                // Log the error type for debugging
+                await JSRuntime.InvokeVoidAsync("console.error",
+                    $"DataService error for {typeof(TLookup).Name}: {result.ErrorType} - {result.ErrorMessage}");
+            }
+        }
+        catch (Exception ex)
+        {
+            items = new List<TLookup>();
+            filteredItems = items.AsQueryable();
+            errorMessage = $"Unexpected error: {ex.Message}";
+
+            await JSRuntime.InvokeVoidAsync("console.error",
+                $"Exception loading {typeof(TLookup).Name}: {ex}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 
     private void ShowAddModal()
@@ -109,12 +186,23 @@
 
     private void ShowEditModal(TLookup item)
     {
+        // Create a copy to avoid modifying the original item during editing
         editingItem = new TLookup
         {
             Id = item.Id,
             Name = item.Name,
-            IsActive = item.IsActive
+            IsActive = item.IsActive,
+            CreatedDateTimeUtc = item.CreatedDateTimeUtc,
+            UpdatedDateTimeUtc = item.UpdatedDateTimeUtc
         };
+
+        // Copy audit fields if they exist
+        if (editingItem is IAuditableEntity editingAuditable && item is IAuditableEntity itemAuditable)
+        {
+            editingAuditable.CreatedById = itemAuditable.CreatedById;
+            editingAuditable.ModifiedById = itemAuditable.ModifiedById;
+        }
+
         showModal = true;
     }
 
@@ -122,44 +210,119 @@
     {
         showModal = false;
         editingItem = new();
+        isSaving = false;
     }
 
     private async Task SaveItem()
     {
         try
         {
+            isSaving = true;
+
+            // Get current user for security
+            ClaimsPrincipal? user = null;
+            if (AuthenticationStateTask != null)
+            {
+                var authState = await AuthenticationStateTask;
+                user = authState.User;
+            }
+
+            ServiceResult<TLookup> result;
+
             if (editingItem.Id == Guid.Empty)
             {
-                await Repository.CreateAsync(editingItem);
+                // Create new item
+                result = await DataService.CreateAsync(editingItem, user);
             }
             else
             {
-                await Repository.UpdateAsync(editingItem);
+                // Update existing item
+                result = await DataService.UpdateAsync(editingItem, user);
             }
 
-            await LoadItems();
-            HideModal();
+            if (result.IsSuccess)
+            {
+                await LoadItems(); // Reload the list
+                HideModal();
+
+                var action = editingItem.Id == Guid.Empty ? "created" : "updated";
+                FeedbackService.ShowAlert(Common.Enums.FeedbackType.Success, $"{GetEntityDisplayName()} {action} successfully!");
+            }
+            else
+            {
+                // Handle different error types
+                var errorMsg = result.ErrorType switch
+                {
+                    ServiceErrorType.ValidationError => $"Validation error: {result.ErrorMessage}",
+                    ServiceErrorType.UnauthorizedAccess => "You don't have permission to perform this action.",
+                    ServiceErrorType.DatabaseError => "Database error occurred. Please try again.",
+                    ServiceErrorType.ConcurrencyError => "This item was modified by another user. Please refresh and try again.",
+                    _ => result.ErrorMessage ?? "An unknown error occurred."
+                };
+
+                FeedbackService.ShowAlert(Common.Enums.FeedbackType.Error, $"Error saving {GetEntityDisplayName().ToLower()}: {errorMsg}");
+            }
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("alert", $"Error saving item: {ex.Message}");
+            FeedbackService.ShowAlert(Common.Enums.FeedbackType.Error, $"Unexpected error: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("console.error", $"Exception saving {typeof(TLookup).Name}: {ex}");
+        }
+        finally
+        {
+            isSaving = false;
         }
     }
 
     private async Task DeleteItem(Guid id)
     {
-        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this item?");
-        if (confirmed)
+        var entityName = GetEntityDisplayName().ToLower();
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm",
+            $"Are you sure you want to delete this {entityName}?");
+
+        if (!confirmed) return;
+
+        try
         {
-            try
+            // Get current user for security
+            ClaimsPrincipal? user = null;
+            if (AuthenticationStateTask != null)
             {
-                await Repository.DeleteAsync(id);
-                await LoadItems();
+                var authState = await AuthenticationStateTask;
+                user = authState.User;
             }
-            catch (Exception ex)
+
+            var result = await DataService.DeleteAsync(id, user);
+
+            if (result.IsSuccess)
             {
-                await JSRuntime.InvokeVoidAsync("alert", $"Error deleting item: {ex.Message}");
+                await LoadItems(); // Reload the list
+                await JSRuntime.InvokeVoidAsync("alert", $"{GetEntityDisplayName()} deleted successfully!");
+            }
+            else
+            {
+                var errorMsg = result.ErrorType switch
+                {
+                    ServiceErrorType.NotFound => $"{GetEntityDisplayName()} not found.",
+                    ServiceErrorType.UnauthorizedAccess => "You don't have permission to delete this item.",
+                    ServiceErrorType.DatabaseError => "Database error occurred. Please try again.",
+                    _ => result.ErrorMessage ?? "An unknown error occurred."
+                };
+
+                await JSRuntime.InvokeVoidAsync("alert", $"Error deleting {entityName}: {errorMsg}");
             }
         }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Unexpected error: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("console.error", $"Exception deleting {typeof(TLookup).Name}: {ex}");
+        }
+    }
+
+    private string GetEntityDisplayName()
+    {
+        // Convert "SomeEntity" to "Some Entity" for better display
+        var typeName = typeof(TLookup).Name;
+        return System.Text.RegularExpressions.Regex.Replace(typeName, "([a-z])([A-Z])", "$1 $2");
     }
 }

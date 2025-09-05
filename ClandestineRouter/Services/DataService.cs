@@ -13,6 +13,10 @@ using DataAnnotationValidationResult = System.ComponentModel.DataAnnotations.Val
 
 namespace ClandestineRouter.Services;
 
+// DEV NOTES
+// === =====
+// I tried to use some caching but it was not robust enough so they are commented out below for reference.
+
 /// <summary>
 /// Data service with security, caching, and comprehensive error handling.
 /// </summary>
@@ -32,7 +36,7 @@ public class DataService<TEntity> : IDataService<TEntity> where TEntity : class,
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<DataService<TEntity>> _logger;
-    private readonly IMemoryCache _cache;
+    //private readonly IMemoryCache _cache;
     private readonly DataServiceOptions _options;
     private readonly DbSet<TEntity> _dbSet;
     private readonly string _entityName;
@@ -45,7 +49,7 @@ public class DataService<TEntity> : IDataService<TEntity> where TEntity : class,
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        //_cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
 
         _dbSet = _context.Set<TEntity>();
@@ -64,21 +68,21 @@ public class DataService<TEntity> : IDataService<TEntity> where TEntity : class,
 
             var cacheKey = $"{_entityName}_{id}";
 
-            if (_cache.TryGetValue(cacheKey, out TEntity? cachedEntity))
-            {
-                _logger.LogDebug("Cache hit for {EntityName} with ID {Id}", _entityName, id);
+            //if (_cache.TryGetValue(cacheKey, out TEntity? cachedEntity))
+            //{
+            //    _logger.LogDebug("Cache hit for {EntityName} with ID {Id}", _entityName, id);
 
-                if (cachedEntity != null && !await CanAccessEntityAsync(cachedEntity, user, OperationType.Read))
-                {
-                    _logger.LogWarning("Access denied for user {UserId} to {EntityName} {Id}",
-                        GetUserId(user), _entityName, id);
-                    return ServiceResult<TEntity?>.Failure("Access denied", ServiceErrorType.UnauthorizedAccess);
-                }
+            //    if (cachedEntity != null && !await CanAccessEntityAsync(cachedEntity, user, OperationType.Read))
+            //    {
+            //        _logger.LogWarning("Access denied for user {UserId} to {EntityName} {Id}",
+            //            GetUserId(user), _entityName, id);
+            //        return ServiceResult<TEntity?>.Failure("Access denied", ServiceErrorType.UnauthorizedAccess);
+            //    }
 
-                return ServiceResult<TEntity?>.Success(cachedEntity);
-            }
+            //    return ServiceResult<TEntity?>.Success(cachedEntity);
+            //}
 
-            var query = ApplySoftDeleteFilter(_dbSet.AsQueryable());
+            var query = ApplySoftDeleteFilter(_dbSet.AsQueryable()).AsNoTracking();
             var entity = await query.FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
 
             if (entity != null && !await CanAccessEntityAsync(entity, user, OperationType.Read))
@@ -97,7 +101,7 @@ public class DataService<TEntity> : IDataService<TEntity> where TEntity : class,
                     Priority = CacheItemPriority.Normal
                 };
 
-                _cache.Set(cacheKey, entity, cacheOptions);
+                //_cache.Set(cacheKey, entity, cacheOptions);
                 _logger.LogDebug("Cached {EntityName} with ID {Id}", _entityName, id);
             }
 
@@ -131,13 +135,13 @@ public class DataService<TEntity> : IDataService<TEntity> where TEntity : class,
 
             var cacheKey = $"{_entityName}_All_{GetUserId(user)}";
 
-            if (_cache.TryGetValue(cacheKey, out IEnumerable<TEntity>? cachedEntities))
-            {
-                _logger.LogDebug("Cache hit for all {EntityName} entities", _entityName);
-                return ServiceResult<IEnumerable<TEntity>>.Success(cachedEntities!);
-            }
+            //if (_cache.TryGetValue(cacheKey, out IEnumerable<TEntity>? cachedEntities))
+            //{
+            //    _logger.LogDebug("Cache hit for all {EntityName} entities", _entityName);
+            //    return ServiceResult<IEnumerable<TEntity>>.Success(cachedEntities!);
+            //}
 
-            var query = ApplySoftDeleteFilter(_dbSet.AsQueryable());
+            var query = ApplySoftDeleteFilter(_dbSet.AsQueryable()).AsNoTracking();
             query = await ApplyUserFiltersAsync(query, user, OperationType.ReadAll);
 
             var entities = await query.ToListAsync(cancellationToken);
@@ -148,7 +152,7 @@ public class DataService<TEntity> : IDataService<TEntity> where TEntity : class,
                 Priority = CacheItemPriority.Low
             };
 
-            _cache.Set(cacheKey, entities, cacheOptions);
+            //_cache.Set(cacheKey, entities, cacheOptions);
 
             _logger.LogInformation("Retrieved all {EntityName} entities ({Count} items) for user {UserId}",
                 _entityName, entities.Count, GetUserId(user));
@@ -259,7 +263,7 @@ public class DataService<TEntity> : IDataService<TEntity> where TEntity : class,
             await _context.SaveChangesAsync(cancellationToken);
 
             // Invalidate relevant caches
-            InvalidateEntityCaches();
+            //InvalidateEntityCaches();
 
             var entityId = GetEntityId(entity);
             _logger.LogInformation("Created {EntityName} with ID {Id} by user {UserId}",
@@ -315,8 +319,8 @@ public class DataService<TEntity> : IDataService<TEntity> where TEntity : class,
             await _context.SaveChangesAsync(cancellationToken);
 
             // Invalidate relevant caches
-            InvalidateEntityCaches();
-            _cache.Remove($"{_entityName}_{entityId}");
+            //InvalidateEntityCaches();
+            //_cache.Remove($"{_entityName}_{entityId}");
 
             _logger.LogInformation("Updated {EntityName} with ID {Id} by user {UserId}",
                 _entityName, entityId, GetUserId(user));
@@ -340,7 +344,7 @@ public class DataService<TEntity> : IDataService<TEntity> where TEntity : class,
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating {EntityName}", _entityName);
+            _logger.LogError(ex, "Error updating {EntityName}:" + ex.Message, _entityName);
             return ServiceResult<TEntity>.Failure($"Error updating {_entityName}", ServiceErrorType.UnknownError);
         }
     }
@@ -383,8 +387,8 @@ public class DataService<TEntity> : IDataService<TEntity> where TEntity : class,
             await _context.SaveChangesAsync(cancellationToken);
 
             // Invalidate relevant caches
-            InvalidateEntityCaches();
-            _cache.Remove($"{_entityName}_{id}");
+            //InvalidateEntityCaches();
+            //_cache.Remove($"{_entityName}_{id}");
 
             _logger.LogInformation("Deleted {EntityName} with ID {Id} by user {UserId} (Soft: {SoftDelete})",
                 _entityName, id, GetUserId(user), _options.UseSoftDelete);
@@ -533,7 +537,7 @@ public class DataService<TEntity> : IDataService<TEntity> where TEntity : class,
 
     private void SetAuditFields(TEntity entity, ClaimsPrincipal? user, bool isCreate)
     {
-        var userId = GetUserId(user);
+        var userId = GetUserId(user) ?? throw new InvalidOperationException("User ID is required for audit fields.");
         var now = DateTime.UtcNow;
 
         // Always update the UpdatedDateTimeUtc (from your BaseModel)
@@ -568,21 +572,21 @@ public class DataService<TEntity> : IDataService<TEntity> where TEntity : class,
         return new ServiceValidationResult { IsSuccess = true };
     }
 
-    private void InvalidateEntityCaches()
-    {
-        // In a real implementation, you might want to use a more sophisticated cache invalidation strategy
-        // For now, we'll remove common cache patterns
-        var keysToRemove = new List<string>
-        {
-            $"{_entityName}_All",
-            $"{_entityName}_Paged"
-        };
+    //private void InvalidateEntityCaches()
+    //{
+    //    // In a real implementation, you might want to use a more sophisticated cache invalidation strategy
+    //    // For now, we'll remove common cache patterns
+    //    var keysToRemove = new List<string>
+    //    {
+    //        $"{_entityName}_All",
+    //        $"{_entityName}_Paged"
+    //    };
 
-        foreach (var key in keysToRemove)
-        {
-            _cache.Remove(key);
-        }
-    }
+    //    foreach (var key in keysToRemove)
+    //    {
+    //        _cache.Remove(key);
+    //    }
+    //}
 
     #endregion
 }

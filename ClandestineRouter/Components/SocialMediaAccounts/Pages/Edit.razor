@@ -1,5 +1,142 @@
-﻿<h3>Edit</h3>
+﻿@page "/SocialMediaAccounts/edit"
+@rendermode InteractiveServer
+
+@using ClandestineRouter.Services
+@using System.ComponentModel.DataAnnotations
+
+@inject IDataService<SocialMediaAccount> DataService
+@inject IDataService<SocialMediaApp> SocialMediaAppsDataService
+@inject FeedbackService FeedbackService
+@inject BreadcrumbService BreadcrumbService
+
+
+<PageTitle>@Verb social media account</PageTitle>
+<h1>@Verb social media account</h1>
+
+<div class="row">
+    <div class="col col-md-6">
+        <div class="card">
+            <div class="card-header">
+                @Verb social media account
+            </div>
+            <div class="card-body">
+                <EditForm Model="Input" FormName="EditSocialMediaAccount" OnValidSubmit="HandleOnValidSubmitAsync">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger" role="alert" />
+
+                    <div class="row">
+                        <div class="col">
+                            <div class="form-floating mb-3">
+                                <InputSelect @bind-Value="Input.SocialMediaAppId" class="form-select" id="Input.SocialMediaAppId">
+                                    <option value="">Select an app</option>
+                                    @foreach (var app in SocialMediaApps)
+                                    {
+                                        <option value="@app.Id">@app.Name</option>
+                                    }
+                                </InputSelect>
+                                <label for="Input.SocialMediaAppId" class="form-label">Social media app</label>
+                                <ValidationMessage For="() => Input.SocialMediaAppId" class="text-danger" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <div class="form-floating mb-3">
+                                <InputText type="text" class="form-control" id="Input.Username" @bind-Value="Input.Username" />
+                                <label for="Input.Username" class="form-label">Username</label>
+                                <ValidationMessage For="() => Input.Username" class="text-danger" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mb-4">
+                        <div class="col">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="HandleProfileDataAsync">Get social media profile </button>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <div class="form-floating mb-3">
+                                <InputText class="form-control" id="Input.DisplayName" @bind-Value="Input.DisplayName" />
+                                <label for="Input.DisplayName" class="form-label">Display name</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <div class="d-flex justify-content-start gap-2">
+                                <button type="submit" class="btn btn-primary">Save</button>
+                                <a href="/socialmediaaccounts" class="btn btn-outline-secondary">Cancel</a>
+                            </div>
+                        </div>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
 
 @code {
 
+    [SupplyParameterFromQuery(Name = "id")]
+    public Guid? EditSocialMediaAccountId { get; set; }
+
+    private string Verb => EditSocialMediaAccountId.HasValue ? "Edit" : "Add";
+    private InputModel Input = new();
+    private List<SocialMediaApp> SocialMediaApps { get; set; } = [];
+    private async Task LoadPageMetadataAsync()
+    {
+        var apps = await SocialMediaAppsDataService.GetAllAsync();
+        if (apps.IsSuccess && apps.Data is not null)
+            SocialMediaApps = apps.Data.ToList();
+        else
+            FeedbackService.ShowAlert(Common.Enums.FeedbackType.Error, "Failed to load social media apps.");
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        BreadcrumbService.SetBreadcrumbs(
+           new BreadcrumbItem { Text = "Home", Href = "/", Icon = "🏠" },
+           new BreadcrumbItem { Text = "Social media accounts", Icon = "🌐" },
+           new BreadcrumbItem { Text = $"{Verb} social media account", Icon = "✏️" }
+        );
+
+        await LoadPageMetadataAsync();
+        if (EditSocialMediaAccountId.HasValue)
+        {
+            // Load the social media account for editing
+            var result = await DataService.GetByIdAsync(EditSocialMediaAccountId.Value);
+            if (result.IsSuccess && result.Data is not null)
+            {
+                Input.Username = result.Data.Username;
+                Input.DisplayName = result.Data.DisplayName;
+            }
+            else
+            {
+                // Handle error (e.g., show a message or redirect)
+                FeedbackService.ShowAlert(Common.Enums.FeedbackType.Error, "Failed to load the social media account.");
+            }
+        }
+        else
+        {
+            // Prepare for adding a new social media account
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required, Display(Name = "Social media app")]
+        public Guid? SocialMediaAppId { get; set; }
+
+        [Required]
+        public string? Username { get; set; }
+        public string? DisplayName { get; set; }
+    }
+    private async Task HandleOnValidSubmitAsync(EditContext args)
+    {
+        await Task.Delay(1000);
+    }
+    private async Task HandleProfileDataAsync(MouseEventArgs args)
+    {
+        await Task.Delay(1000);
+    }
 }

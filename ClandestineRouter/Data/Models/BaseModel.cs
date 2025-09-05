@@ -17,8 +17,8 @@ public interface IEntity : IBaseModel { }
 /// </summary>
 public interface IAuditableEntity : IEntity
 {
-    Guid? CreatedById { get; set; }
-    Guid? ModifiedById { get; set; }
+    Guid CreatedById { get; set; }
+    Guid ModifiedById { get; set; }
 }
 
 /// <summary>
@@ -46,9 +46,7 @@ public abstract class BaseModel : IBaseModel
 {
     protected BaseModel()
     {
-        Id = Guid.NewGuid();
-        CreatedDateTimeUtc = DateTime.UtcNow;
-        UpdatedDateTimeUtc = DateTime.UtcNow;
+        Id = Guid.Empty;
     }
     protected BaseModel(Guid existingGuid)
     {
@@ -67,8 +65,8 @@ public abstract class EntityBase : BaseModel, IEntity { }
 
 public abstract class AuditableEntity : BaseModel, IAuditableEntity
 {
-    public Guid? CreatedById { get; set; }
-    public Guid? ModifiedById { get; set ; }
+    public Guid CreatedById { get; set; }
+    public Guid ModifiedById { get; set ; }
 }
 
 public abstract class SoftDeletableEntity : BaseModel, ISoftDeletableEntity
@@ -78,15 +76,15 @@ public abstract class SoftDeletableEntity : BaseModel, ISoftDeletableEntity
 
 public abstract class CommonEntityBase : BaseModel, ICommonEntity
 {
-    public Guid? CreatedById { get; set; }
-    public Guid? ModifiedById { get; set; }
+    public Guid CreatedById { get; set; }
+    public Guid ModifiedById { get; set; }
     public bool IsActive { get; set; } = true;
 }
 
 public abstract class LookupEntityBase : BaseModel, ILookupEntity
 {
     public string Name { get; set; } = string.Empty;
-    public Guid? CreatedById { get; set; }
-    public Guid? ModifiedById { get; set; }
+    public Guid CreatedById { get; set; }
+    public Guid ModifiedById { get; set; }
     public bool IsActive { get; set; } = true;
 }
