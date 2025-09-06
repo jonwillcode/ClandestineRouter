@@ -132,12 +132,13 @@
     private sealed class InputModel
     {
         [Required, Display(Name = "Social media app")]
-        public Guid SocialMediaAppId { get; set; }
+        public Guid? SocialMediaAppId { get; set; }
 
         [Required]
         public string Username { get; set; } = string.Empty;
         public string? DisplayName { get; set; }
     }
+
     private async Task HandleOnValidSubmitAsync(EditContext args)
     {
         try
@@ -158,7 +159,9 @@
                 {
                     existingAccount.Data.Username = Input.Username;
                     existingAccount.Data.DisplayName = Input.DisplayName;
-                    existingAccount.Data.SocialMediaAppId = Input.SocialMediaAppId;
+                    existingAccount.Data.SocialMediaAppId = Input.SocialMediaAppId.HasValue ? 
+                        Input.SocialMediaAppId.Value :
+                        throw new Exception("Something went wrong");
                     var updateResult = await DataService.UpdateAsync(existingAccount.Data, user);
                     if (updateResult.IsSuccess)
                     {
@@ -180,7 +183,7 @@
                 {
                     Username = Input.Username,
                     DisplayName = Input.DisplayName,
-                    SocialMediaAppId = Input.SocialMediaAppId,
+                    SocialMediaAppId = Input.SocialMediaAppId.HasValue ? Input.SocialMediaAppId.Value : throw new NullReferenceException("Missing Input.SocialMediaAppId.value"),
                     CreatedDateTimeUtc = DateTime.UtcNow
                 };
                 var createResult = await DataService.CreateAsync(newAccount, user);
