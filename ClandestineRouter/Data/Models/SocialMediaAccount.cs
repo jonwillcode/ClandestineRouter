@@ -4,10 +4,9 @@ namespace ClandestineRouter.Data.Models;
 
 public class SocialMediaAccount : CommonEntityBase
 {
-    [Required]
-    public Guid AppId { get; set; }
-
     public SocialMediaApp SocialMediaApp { get; set; } = null!;
+    [Required]
+    public Guid SocialMediaAppId { get; set; }
 
     [Required, MaxLength(256)]
     public required string Username { get; set; }

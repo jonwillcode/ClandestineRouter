@@ -312,15 +312,28 @@ public class DataService<TEntity> : IDataService<TEntity> where TEntity : class,
                 return ServiceResult<TEntity>.Failure(validationResult.ErrorMessage!, ServiceErrorType.ValidationError);
             }
 
+            // Detach any existing tracked entity with the same key
+            var existingEntity = _context.Entry(entity);
+            if (existingEntity.State != EntityState.Detached)
+            {
+                // If this entity is already tracked, detach it
+                existingEntity.State = EntityState.Detached;
+            }
+
+            // Check if there's another instance being tracked
+            var trackedEntity = _context.ChangeTracker.Entries<TEntity>()
+                .FirstOrDefault(e => e.Entity.Id == entityId);
+
+            if (trackedEntity != null)
+            {
+                trackedEntity.State = EntityState.Detached;
+            }
+
             // Set audit fields
             SetAuditFields(entity, user, isCreate: false);
 
             _context.Entry(entity).State = EntityState.Modified;
             await _context.SaveChangesAsync(cancellationToken);
-
-            // Invalidate relevant caches
-            //InvalidateEntityCaches();
-            //_cache.Remove($"{_entityName}_{entityId}");
 
             _logger.LogInformation("Updated {EntityName} with ID {Id} by user {UserId}",
                 _entityName, entityId, GetUserId(user));

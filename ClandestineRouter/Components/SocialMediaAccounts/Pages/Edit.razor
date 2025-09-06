@@ -3,6 +3,7 @@
 
 @using ClandestineRouter.Services
 @using System.ComponentModel.DataAnnotations
+@using System.Security.Claims
 
 @inject IDataService<SocialMediaAccount> DataService
 @inject IDataService<SocialMediaApp> SocialMediaAppsDataService
@@ -80,8 +81,12 @@
     [SupplyParameterFromQuery(Name = "id")]
     public Guid? EditSocialMediaAccountId { get; set; }
 
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
     private string Verb => EditSocialMediaAccountId.HasValue ? "Edit" : "Add";
     private InputModel Input = new();
+    private bool IsWorking = true;
     private List<SocialMediaApp> SocialMediaApps { get; set; } = [];
     private async Task LoadPageMetadataAsync()
     {
@@ -96,7 +101,7 @@
     {
         BreadcrumbService.SetBreadcrumbs(
            new BreadcrumbItem { Text = "Home", Href = "/", Icon = "🏠" },
-           new BreadcrumbItem { Text = "Social media accounts", Icon = "🌐" },
+           new BreadcrumbItem { Text = "Social media accounts", Href="/SocialMediaAccounts", Icon = "🌐" },
            new BreadcrumbItem { Text = $"{Verb} social media account", Icon = "✏️" }
         );
 
@@ -120,20 +125,81 @@
         {
             // Prepare for adding a new social media account
         }
+
+        IsWorking = false;
     }
 
     private sealed class InputModel
     {
         [Required, Display(Name = "Social media app")]
-        public Guid? SocialMediaAppId { get; set; }
+        public Guid SocialMediaAppId { get; set; }
 
         [Required]
-        public string? Username { get; set; }
+        public string Username { get; set; } = string.Empty;
         public string? DisplayName { get; set; }
     }
     private async Task HandleOnValidSubmitAsync(EditContext args)
     {
-        await Task.Delay(1000);
+        try
+        {
+            IsWorking = true;
+
+            ClaimsPrincipal? user = null;
+            if (AuthenticationStateTask != null)
+            {
+                var authState = await AuthenticationStateTask;
+                user = authState.User;
+            }
+
+            if (EditSocialMediaAccountId.HasValue)
+            {
+                var existingAccount = await DataService.GetByIdAsync(EditSocialMediaAccountId.Value);
+                if (existingAccount.IsSuccess && existingAccount.Data is not null)
+                {
+                    existingAccount.Data.Username = Input.Username;
+                    existingAccount.Data.DisplayName = Input.DisplayName;
+                    existingAccount.Data.SocialMediaAppId = Input.SocialMediaAppId;
+                    var updateResult = await DataService.UpdateAsync(existingAccount.Data, user);
+                    if (updateResult.IsSuccess)
+                    {
+                        FeedbackService.ShowAlert(Common.Enums.FeedbackType.Success, "Social media account updated successfully.");
+                    }
+                    else
+                    {
+                        FeedbackService.ShowAlert(Common.Enums.FeedbackType.Error, "Failed to update social media account.");
+                    }
+                }
+                else
+                {
+                    FeedbackService.ShowAlert(Common.Enums.FeedbackType.Error, "Social media account not found.");
+                }
+            }
+            else
+            {
+                var newAccount = new SocialMediaAccount
+                {
+                    Username = Input.Username,
+                    DisplayName = Input.DisplayName,
+                    SocialMediaAppId = Input.SocialMediaAppId,
+                    CreatedDateTimeUtc = DateTime.UtcNow
+                };
+                var createResult = await DataService.CreateAsync(newAccount, user);
+                if (createResult.IsSuccess)
+                {
+                    FeedbackService.ShowAlert(Common.Enums.FeedbackType.Success, "Social media account created successfully.");
+                }
+                else
+                {
+                    FeedbackService.ShowAlert(Common.Enums.FeedbackType.Error, "Failed to create social media account.");
+                }
+            }
+
+            IsWorking = false;
+        }
+        catch (Exception ex)
+        {
+            FeedbackService.ShowAlert(Common.Enums.FeedbackType.Error, $"An error occurred: {ex.Message}");
+        }
     }
     private async Task HandleProfileDataAsync(MouseEventArgs args)
     {

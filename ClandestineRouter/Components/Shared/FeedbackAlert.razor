@@ -33,32 +33,32 @@
 </div>
 
 @code {
-    private readonly Dictionary<Guid, bool> _displayedMessages = new();
+    // private readonly Dictionary<Guid, bool> _displayedMessages = new();
 
     protected override void OnInitialized()
     {
         FeedbackService.OnChange += StateHasChanged;
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        // Auto-dismiss messages after a delay and mark them as displayed
-        var messagesToProcess = FeedbackService.Messages
-            .Where(m => !_displayedMessages.ContainsKey(m.Id))
-            .ToList();
+    // protected override void OnAfterRender(bool firstRender)
+    // {
+    //     // Auto-dismiss messages after a delay and mark them as displayed
+    //     var messagesToProcess = FeedbackService.Messages
+    //         .Where(m => !_displayedMessages.ContainsKey(m.Id))
+    //         .ToList();
 
-        foreach (var message in messagesToProcess)
-        {
-            _displayedMessages[message.Id] = true;
+    //     foreach (var message in messagesToProcess)
+    //     {
+    //         _displayedMessages[message.Id] = true;
 
-            // Auto-dismiss after delay (adjust timing as needed)
-            _ = Task.Run(async () =>
-            {
-                await Task.Delay(5000); // 5 seconds
-                await InvokeAsync(() => CloseAlert(message.Id));
-            });
-        }
-    }
+    //         // Auto-dismiss after delay (adjust timing as needed)
+    //         _ = Task.Run(async () =>
+    //         {
+    //             await Task.Delay(5000); 5 seconds
+    //             await InvokeAsync(() => CloseAlert(message.Id));
+    //         });
+    //     }
+    // }
 
     private async Task CloseAlert(Guid messageId)
     {
@@ -67,7 +67,7 @@
 
         // Remove from service and mark as handled
         FeedbackService.RemoveMessage(messageId);
-        _displayedMessages.Remove(messageId);
+        //_displayedMessages.Remove(messageId);
 
         StateHasChanged();
     }
