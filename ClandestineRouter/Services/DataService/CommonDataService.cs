@@ -8,43 +8,31 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Security.Claims;
-using System.Text.Json;
 using DataAnnotationValidationResult = System.ComponentModel.DataAnnotations.ValidationResult;
 
-namespace ClandestineRouter.Services;
+namespace ClandestineRouter.Services.DataService;
 
-// DEV NOTES
-// === =====
-// I tried to use some caching but it was not robust enough so they are commented out below for reference.
-
-/// <summary>
-/// Data service with security, caching, and comprehensive error handling.
-/// </summary>
-public interface IDataService<TEntity> where TEntity : class, IBaseModel
+public interface ICommonDataService<TEntity> : IDataService<TEntity> where TEntity : class, ICommonEntity
 {
-    Task<ServiceResult<TEntity?>> GetByIdAsync(Guid id, ClaimsPrincipal? user = null, CancellationToken cancellationToken = default);
-    Task<ServiceResult<IEnumerable<TEntity>>> GetAllAsync(ClaimsPrincipal? user = null, CancellationToken cancellationToken = default);
-    Task<ServiceResult<PagedResult<TEntity>>> GetPagedAsync(int page, int pageSize, Expression<Func<TEntity, bool>>? filter = null,
-        Expression<Func<TEntity, object>>? orderBy = null, bool ascending = true, ClaimsPrincipal? user = null, CancellationToken cancellationToken = default);
-    Task<ServiceResult<TEntity>> CreateAsync(TEntity entity, ClaimsPrincipal? user = null, CancellationToken cancellationToken = default);
-    Task<ServiceResult<TEntity>> UpdateAsync(TEntity entity, ClaimsPrincipal? user = null, CancellationToken cancellationToken = default);
-    Task<ServiceResult<bool>> DeleteAsync(Guid id, ClaimsPrincipal? user = null, CancellationToken cancellationToken = default);
-    Task<ServiceResult<IEnumerable<TEntity>>> SearchAsync(Expression<Func<TEntity, bool>> predicate, ClaimsPrincipal? user = null, CancellationToken cancellationToken = default);
+    Task<ServiceResult<TEntity?>> GetByIdWithIncludesAsync(Guid id, Expression<Func<IQueryable<TEntity>, IQueryable<TEntity>>>? includeExpression = null, ClaimsPrincipal? user = null, CancellationToken cancellationToken = default);
+    Task<ServiceResult<IEnumerable<TEntity>>> GetAllWithIncludesAsync(Expression<Func<IQueryable<TEntity>, IQueryable<TEntity>>>? includeExpression = null, ClaimsPrincipal? user = null, CancellationToken cancellationToken = default);
+    Task<ServiceResult<PagedResult<TEntity>>> GetPagedWithIncludesAsync(int page, int pageSize, Expression<Func<TEntity, bool>>? filter = null, Expression<Func<TEntity, object>>? orderBy = null, bool ascending = true, Expression<Func<IQueryable<TEntity>, IQueryable<TEntity>>>? includeExpression = null, ClaimsPrincipal? user = null, CancellationToken cancellationToken = default);
+    Task<ServiceResult<IEnumerable<TEntity>>> SearchWithIncludesAsync(Expression<Func<TEntity, bool>> predicate, Expression<Func<IQueryable<TEntity>, IQueryable<TEntity>>>? includeExpression = null, ClaimsPrincipal? user = null, CancellationToken cancellationToken = default);
 }
 
-public class DataService<TEntity> : IDataService<TEntity> where TEntity : class, IBaseModel
+public class CommonDataService<TEntity> : ICommonDataService<TEntity> where TEntity : class, ICommonEntity
 {
     private readonly ApplicationDbContext _context;
-    private readonly ILogger<DataService<TEntity>> _logger;
+    private readonly ILogger<CommonDataService<TEntity>> _logger;
     //private readonly IMemoryCache _cache;
     private readonly DataServiceOptions _options;
     private readonly DbSet<TEntity> _dbSet;
     private readonly string _entityName;
 
-    public DataService(
+    public CommonDataService(
         ApplicationDbContext context,
-        ILogger<DataService<TEntity>> logger,
-        IMemoryCache cache,
+        ILogger<CommonDataService<TEntity>> logger,
+        //IMemoryCache cache,
         IOptions<DataServiceOptions> options)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -465,13 +453,229 @@ public class DataService<TEntity> : IDataService<TEntity> where TEntity : class,
         }
     }
 
+    public async Task<ServiceResult<TEntity?>> GetByIdWithIncludesAsync(
+    Guid id,
+    Expression<Func<IQueryable<TEntity>, IQueryable<TEntity>>>? includeExpression = null,
+    ClaimsPrincipal? user = null,
+    CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (id == Guid.Empty)
+            {
+                _logger.LogWarning("Invalid ID provided: {Id} for entity {EntityName}", id, _entityName);
+                return ServiceResult<TEntity?>.Failure("Invalid ID provided", ServiceErrorType.ValidationError);
+            }
+
+            var query = ApplySoftDeleteFilter(_dbSet.AsQueryable());
+
+            // Apply includes if provided
+            if (includeExpression != null)
+            {
+                query = includeExpression.Compile()(query);
+            }
+
+            var entity = await query.AsNoTracking()
+                .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
+
+            if (entity != null && !await CanAccessEntityAsync(entity, user, OperationType.Read))
+            {
+                _logger.LogWarning("Access denied for user {UserId} to {EntityName} {Id}",
+                    GetUserId(user), _entityName, id);
+                return ServiceResult<TEntity?>.Failure("Access denied", ServiceErrorType.UnauthorizedAccess);
+            }
+
+            _logger.LogInformation("Retrieved {EntityName} with ID {Id} (with includes) by user {UserId}",
+                _entityName, id, GetUserId(user));
+
+            return ServiceResult<TEntity?>.Success(entity);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("GetByIdWithIncludesAsync operation was cancelled for {EntityName} {Id}", _entityName, id);
+            return ServiceResult<TEntity?>.Failure("Operation was cancelled", ServiceErrorType.OperationCancelled);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving {EntityName} with ID {Id} (with includes)", _entityName, id);
+            return ServiceResult<TEntity?>.Failure($"Error retrieving {_entityName}", ServiceErrorType.DatabaseError);
+        }
+    }
+
+    public async Task<ServiceResult<IEnumerable<TEntity>>> GetAllWithIncludesAsync(
+        Expression<Func<IQueryable<TEntity>, IQueryable<TEntity>>>? includeExpression = null,
+        ClaimsPrincipal? user = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (!await CanPerformOperationAsync(user, OperationType.ReadAll))
+            {
+                _logger.LogWarning("Access denied for user {UserId} to read all {EntityName}",
+                    GetUserId(user), _entityName);
+                return ServiceResult<IEnumerable<TEntity>>.Failure("Access denied", ServiceErrorType.UnauthorizedAccess);
+            }
+
+            var query = ApplySoftDeleteFilter(_dbSet.AsQueryable());
+            query = await ApplyUserFiltersAsync(query, user, OperationType.ReadAll);
+
+            // Apply includes if provided
+            if (includeExpression != null)
+            {
+                query = includeExpression.Compile()(query);
+            }
+
+            var entities = await query.AsNoTracking().ToListAsync(cancellationToken);
+
+            _logger.LogInformation("Retrieved all {EntityName} entities ({Count} items) with includes for user {UserId}",
+                _entityName, entities.Count, GetUserId(user));
+
+            return ServiceResult<IEnumerable<TEntity>>.Success(entities);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("GetAllWithIncludesAsync operation was cancelled for {EntityName}", _entityName);
+            return ServiceResult<IEnumerable<TEntity>>.Failure("Operation was cancelled", ServiceErrorType.OperationCancelled);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving all {EntityName} entities with includes", _entityName);
+            return ServiceResult<IEnumerable<TEntity>>.Failure($"Error retrieving {_entityName} entities", ServiceErrorType.DatabaseError);
+        }
+    }
+
+    public async Task<ServiceResult<PagedResult<TEntity>>> GetPagedWithIncludesAsync(
+        int page,
+        int pageSize,
+        Expression<Func<TEntity, bool>>? filter = null,
+        Expression<Func<TEntity, object>>? orderBy = null,
+        bool ascending = true,
+        Expression<Func<IQueryable<TEntity>, IQueryable<TEntity>>>? includeExpression = null,
+        ClaimsPrincipal? user = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (page < 1) page = 1;
+            if (pageSize < 1) pageSize = _options.DefaultPageSize;
+            if (pageSize > _options.MaxPageSize) pageSize = _options.MaxPageSize;
+
+            if (!await CanPerformOperationAsync(user, OperationType.ReadAll))
+            {
+                _logger.LogWarning("Access denied for user {UserId} to read paged {EntityName}",
+                    GetUserId(user), _entityName);
+                return ServiceResult<PagedResult<TEntity>>.Failure("Access denied", ServiceErrorType.UnauthorizedAccess);
+            }
+
+            var query = ApplySoftDeleteFilter(_dbSet.AsQueryable());
+            query = await ApplyUserFiltersAsync(query, user, OperationType.ReadAll);
+
+            if (filter != null)
+            {
+                query = query.Where(filter);
+            }
+
+            // Apply includes for the count query (without includes to be more efficient)
+            var totalCount = await query.CountAsync(cancellationToken);
+
+            // Apply includes for the data query
+            if (includeExpression != null)
+            {
+                query = includeExpression.Compile()(query);
+            }
+
+            if (orderBy != null)
+            {
+                query = ascending ? query.OrderBy(orderBy) : query.OrderByDescending(orderBy);
+            }
+
+            var entities = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+
+            var pagedResult = new PagedResult<TEntity>
+            {
+                Items = entities,
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize,
+                TotalPages = (int)Math.Ceiling((double)totalCount / pageSize)
+            };
+
+            _logger.LogInformation("Retrieved paged {EntityName} entities (Page {Page}/{TotalPages}, {Count}/{TotalCount} items) with includes for user {UserId}",
+                _entityName, page, pagedResult.TotalPages, entities.Count, totalCount, GetUserId(user));
+
+            return ServiceResult<PagedResult<TEntity>>.Success(pagedResult);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("GetPagedWithIncludesAsync operation was cancelled for {EntityName}", _entityName);
+            return ServiceResult<PagedResult<TEntity>>.Failure("Operation was cancelled", ServiceErrorType.OperationCancelled);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving paged {EntityName} entities with includes", _entityName);
+            return ServiceResult<PagedResult<TEntity>>.Failure($"Error retrieving paged {_entityName} entities", ServiceErrorType.DatabaseError);
+        }
+    }
+
+    public async Task<ServiceResult<IEnumerable<TEntity>>> SearchWithIncludesAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        Expression<Func<IQueryable<TEntity>, IQueryable<TEntity>>>? includeExpression = null,
+        ClaimsPrincipal? user = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (predicate == null)
+        {
+            return ServiceResult<IEnumerable<TEntity>>.Failure("Search predicate cannot be null", ServiceErrorType.ValidationError);
+        }
+
+        try
+        {
+            if (!await CanPerformOperationAsync(user, OperationType.ReadAll))
+            {
+                _logger.LogWarning("Access denied for user {UserId} to search {EntityName}",
+                    GetUserId(user), _entityName);
+                return ServiceResult<IEnumerable<TEntity>>.Failure("Access denied", ServiceErrorType.UnauthorizedAccess);
+            }
+
+            var query = ApplySoftDeleteFilter(_dbSet.AsQueryable());
+            query = await ApplyUserFiltersAsync(query, user, OperationType.ReadAll);
+            query = query.Where(predicate);
+
+            // Apply includes if provided
+            if (includeExpression != null)
+            {
+                query = includeExpression.Compile()(query);
+            }
+
+            var entities = await query.Take(_options.MaxSearchResults).ToListAsync(cancellationToken);
+
+            _logger.LogInformation("Searched {EntityName} entities with includes, found {Count} results for user {UserId}",
+                _entityName, entities.Count, GetUserId(user));
+
+            return ServiceResult<IEnumerable<TEntity>>.Success(entities);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("SearchWithIncludesAsync operation was cancelled for {EntityName}", _entityName);
+            return ServiceResult<IEnumerable<TEntity>>.Failure("Operation was cancelled", ServiceErrorType.OperationCancelled);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error searching {EntityName} entities with includes", _entityName);
+            return ServiceResult<IEnumerable<TEntity>>.Failure($"Error searching {_entityName} entities", ServiceErrorType.DatabaseError);
+        }
+    }
+
     #region Private Helper Methods
 
     private IQueryable<TEntity> ApplySoftDeleteFilter(IQueryable<TEntity> query)
     {
         if (typeof(ISoftDeletableEntity).IsAssignableFrom(typeof(TEntity)) && _options.UseSoftDelete)
         {
-            return query.Where(e => ((ISoftDeletableEntity)e).IsActive);
+            return query.Where(e => e.IsActive);
         }
         return query;
     }
@@ -484,7 +688,7 @@ public class DataService<TEntity> : IDataService<TEntity> where TEntity : class,
             var userId = GetUserId(user);
             if (userId.HasValue && !IsAdmin(user))
             {
-                query = query.Where(e => ((IAuditableEntity)e).CreatedById == userId.Value);
+                query = query.Where(e => e.CreatedById == userId.Value);
             }
         }
 
@@ -603,76 +807,3 @@ public class DataService<TEntity> : IDataService<TEntity> where TEntity : class,
 
     #endregion
 }
-
-#region Supporting Classes and Enums
-
-public class ServiceResult<T>
-{
-    public bool IsSuccess { get; private set; }
-    public T? Data { get; private set; }
-    public string? ErrorMessage { get; private set; }
-    public ServiceErrorType ErrorType { get; private set; }
-
-    private ServiceResult(bool isSuccess, T? data, string? errorMessage, ServiceErrorType errorType)
-    {
-        IsSuccess = isSuccess;
-        Data = data;
-        ErrorMessage = errorMessage;
-        ErrorType = errorType;
-    }
-
-    public static ServiceResult<T> Success(T data) => new(true, data, null, ServiceErrorType.None);
-    public static ServiceResult<T> Failure(string errorMessage, ServiceErrorType errorType) => new(false, default, errorMessage, errorType);
-}
-
-public enum ServiceErrorType
-{
-    None,
-    ValidationError,
-    UnauthorizedAccess,
-    NotFound,
-    DatabaseError,
-    ConcurrencyError,
-    OperationCancelled,
-    UnknownError
-}
-
-public enum OperationType
-{
-    Read,
-    ReadAll,
-    Create,
-    Update,
-    Delete
-}
-
-public class PagedResult<T>
-{
-    public IEnumerable<T> Items { get; set; } = Enumerable.Empty<T>();
-    public int TotalCount { get; set; }
-    public int Page { get; set; }
-    public int PageSize { get; set; }
-    public int TotalPages { get; set; }
-    public bool HasNext => Page < TotalPages;
-    public bool HasPrevious => Page > 1;
-}
-
-public class ServiceValidationResult
-{
-    public bool IsSuccess { get; set; }
-    public string? ErrorMessage { get; set; }
-}
-
-public class DataServiceOptions
-{
-    public bool EnableAuthorization { get; set; } = true;
-    public bool EnableTenantIsolation { get; set; } = true;
-    public bool UseSoftDelete { get; set; } = true;
-    public int CacheExpirationMinutes { get; set; } = 30;
-    public int CacheSlidingExpirationMinutes { get; set; } = 5;
-    public int DefaultPageSize { get; set; } = 20;
-    public int MaxPageSize { get; set; } = 100;
-    public int MaxSearchResults { get; set; } = 1000;
-}
-
-#endregion

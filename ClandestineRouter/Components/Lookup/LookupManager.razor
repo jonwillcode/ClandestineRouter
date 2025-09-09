@@ -1,6 +1,7 @@
-﻿@using ClandestineRouter.Services
+﻿@using System.Security.Claims
 @using ClandestineRouter.Data.Models
-@using System.Security.Claims
+@using ClandestineRouter.Services
+@using ClandestineRouter.Services.DataService
 @typeparam TLookup where TLookup : class, ILookupEntity, new()
 @inject IDataService<TLookup> DataService
 @inject FeedbackService FeedbackService
@@ -159,7 +160,7 @@
 
                 // Log the error type for debugging
                 await JSRuntime.InvokeVoidAsync("console.error",
-                    $"DataService error for {typeof(TLookup).Name}: {result.ErrorType} - {result.ErrorMessage}");
+                    $"LookupDataService error for {typeof(TLookup).Name}: {result.ErrorType} - {result.ErrorMessage}");
             }
         }
         catch (Exception ex)

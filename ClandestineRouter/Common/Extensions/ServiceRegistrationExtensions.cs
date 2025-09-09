@@ -1,5 +1,5 @@
 ﻿using ClandestineRouter.Data.Models;
-using ClandestineRouter.Services;
+using ClandestineRouter.Services.DataService;
 using System.Reflection;
 
 namespace ClandestineRouter.Common.Extensions;
@@ -9,38 +9,60 @@ public static class ServiceRegistrationExtensions
     public static IServiceCollection AddDataServices(this IServiceCollection services, params Assembly[] assemblies)
     {
         // If no assemblies provided, scan the calling assembly 
-        if (!assemblies.Any())
+        if (assemblies.Length == 0)
         {
-            assemblies = new[] { Assembly.GetCallingAssembly() };
+            assemblies = [Assembly.GetCallingAssembly()];
         }
 
-        // Find all entity types that implement IEntity 
-        var entityTypes = assemblies
+        // Find all entity types that implement ILookupEntity 
+        var lookupEntityTypes = assemblies
             .SelectMany(a => a.GetTypes())
             .Where(t => t.IsClass &&
                 !t.IsAbstract &&
                 !t.IsGenericType &&
-                typeof(IEntity).IsAssignableFrom(t))
+                typeof(ILookupEntity).IsAssignableFrom(t))
             .ToList();
 
-        // Register IDataService<T> for each entity type 
-        foreach (var entityType in entityTypes)
+        // Register IDataService<T> for each lookup entity type 
+        foreach (var entityType in lookupEntityTypes)
         {
             var serviceType = typeof(IDataService<>).MakeGenericType(entityType);
-            var implementationType = typeof(DataService<>).MakeGenericType(entityType);
-
+            var implementationType = typeof(LookupDataService<>).MakeGenericType(entityType);
             services.AddScoped(serviceType, implementationType);
         }
 
-        var entityNames = string.Join(", ", entityTypes.Select(t => t.Name));
-        Console.WriteLine($"Auto-Registered IDataService for {entityTypes.Count} entities: {entityNames}");
+        var lookupEntityNames = string.Join(", ", lookupEntityTypes.Select(t => t.Name));
+        Console.WriteLine($"Auto-Registered IDataService for {lookupEntityTypes.Count} ILookupEntity entities: {lookupEntityNames}");
 
-        return services; 
+        // Find all entity types that implement ICommonEntity 
+        var commonEntityTypes = assemblies
+            .SelectMany(a => a.GetTypes())
+            .Where(t => t.IsClass &&
+                !t.IsAbstract &&
+                !t.IsGenericType &&
+                typeof(ICommonEntity).IsAssignableFrom(t))
+            .ToList();
+
+        // Register ICommonDataService<T> for each common entity type 
+        foreach (var entityType in commonEntityTypes)
+        {
+            var commonServiceType = typeof(ICommonDataService<>).MakeGenericType(entityType);
+            var dataServiceType = typeof(IDataService<>).MakeGenericType(entityType);
+            var implementationType = typeof(CommonDataService<>).MakeGenericType(entityType);
+
+            // Register both interfaces to the same implementation
+            services.AddScoped(commonServiceType, implementationType);
+            services.AddScoped(dataServiceType, implementationType);
+        }
+
+        var commonEntityNames = string.Join(", ", commonEntityTypes.Select(t => t.Name));
+        Console.WriteLine($"Auto-Registered IDataService for {commonEntityTypes.Count} ICommonEntity entities: {commonEntityNames}");
+
+        return services;
     }
-
     public static IServiceCollection AddDataServiceStack(this IServiceCollection services, Action<DataServiceOptions>? configureOptions = null, params Assembly[] assemblies)
     {
-        // Add memory cache (required by DataService)
+        // Add memory cache (required by LookupDataService)
         services.AddMemoryCache();
 
         // Configure options

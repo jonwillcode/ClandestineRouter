@@ -1,9 +1,11 @@
 ﻿@using ClandestineRouter.Services;
+@using ClandestineRouter.Services.DataService
 
 @rendermode InteractiveServer
 
-@inject IDataService<SocialMediaAccount> SocialMediaAccountDataService
+@* @inject IDataService<SocialMediaAccount> SocialMediaAccountDataService *@
 @inject IDataService<SocialMediaApp> SocialMediaAppDataService
+@inject SocialMediaAccountDataService SocialMediaAccountDataService
 
 <div class="row gap-5">
     <div class="col">
@@ -85,6 +87,7 @@
             !string.IsNullOrWhiteSpace(Input.DisplayName))
         {
             DisplayGrid = true;
+            //var result = await SocialMediaAccountDataService.GetAllAsync();
             var result = await SocialMediaAccountDataService.GetAllAsync();
             if (result.IsSuccess)
             {
@@ -93,9 +96,18 @@
                     DisplayName = account.DisplayName ?? string.Empty,
                     Username = account.Username,
                     UpdatedDateTime = account.UpdatedDateTimeUtc
-                })
-                .AsQueryable();
+                }).AsQueryable();
             }
+            // if (result.IsSuccess)
+            // {
+            //     Results = result.Data?.Select(account => new LookupResult
+            //     {
+            //         DisplayName = account.DisplayName ?? string.Empty,
+            //         Username = account.Username,
+            //         UpdatedDateTime = account.UpdatedDateTimeUtc
+            //     })
+            //     .AsQueryable();
+            // }
             return;
         }
 
@@ -106,6 +118,7 @@
     {
         public string Username { get; set; } = string.Empty;
         public string DisplayName { get; set; } = string.Empty;
+        public string SocialMediaAppName { get; set; } = string.Empty;
         public DateTime UpdatedDateTime { get; set; }
     }
 
